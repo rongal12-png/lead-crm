@@ -1,0 +1,509 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  AGENT
+  VIEWER
+}
+
+enum LeadStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  SNOOZED
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TaskType {
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  SEND_DOCS
+  COLLECT_PAYMENT
+  UPDATE_KYC
+  OTHER
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  MEETING
+  EMAIL
+  WHATSAPP
+  TELEGRAM
+  STAGE_CHANGE
+  TASK_CREATED
+  TASK_COMPLETED
+  AI_SUMMARY
+  AI_COMMAND
+  FILE_SENT
+  PAYMENT_UPDATE
+  OWNER_CHANGE
+  LEAD_CREATED
+}
+
+enum AICommandStatus {
+  PENDING
+  CONFIRMED
+  EXECUTED
+  REJECTED
+  FAILED
+}
+
+enum AIInsightType {
+  INACTIVITY_ALERT
+  HOT_LEAD
+  LOSS_RISK
+  OVERDUE_TASKS
+  PIPELINE_STUCK
+  QUALITY_LEADER
+  NEXT_BEST_ACTION
+  DUPLICATE_DETECTED
+}
+
+enum AIInsightSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AIInsightStatus {
+  ACTIVE
+  DISMISSED
+  ACTED_UPON
+}
+
+enum NotificationType {
+  TASK_OVERDUE
+  LEAD_INACTIVE
+  HOT_LEAD
+  STAGE_CHANGE
+  ASSIGNMENT
+  AI_INSIGHT
+  SYSTEM
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  CURRENCY
+  DATE
+  DATETIME
+  SELECT
+  MULTI_SELECT
+  BOOLEAN
+  USER
+  FILE
+  URL
+  EMAIL
+  PHONE
+  RELATION
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  role          UserRole  @default(AGENT)
+  teamId        String?
+  status        String    @default("active")
+  language      String    @default("he")
+  timezone      String    @default("Asia/Jerusalem")
+  quota         Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  team          Team?          @relation(fields: [teamId], references: [id])
+  ownedLeads    Lead[]         @relation("LeadOwner")
+  createdLeads  Lead[]         @relation("LeadCreator")
+  activities    Activity[]
+  assignedTasks Task[]         @relation("TaskAssignee")
+  createdTasks  Task[]         @relation("TaskCreator")
+  notifications Notification[]
+  aiCommands    AICommand[]
+  sessions      Session[]
+  accounts      Account[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([teamId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  managerId String?
+  createdAt DateTime @default(now())
+
+  users User[]
+}
+
+model LeadType {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  defaultPipelineId String?
+  isActive          Boolean  @default(true)
+  color             String   @default("#6366f1")
+  createdAt         DateTime @default(now())
+
+  leads     Lead[]
+  fieldDefs CustomFieldDefinition[]
+  pipeline  Pipeline?               @relation("DefaultPipeline", fields: [defaultPipelineId], references: [id])
+  pipelines Pipeline[]              @relation("PipelineLeadType")
+
+  @@index([isActive])
+}
+
+model Pipeline {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  stages              Stage[]
+  leads               Lead[]
+  leadTypes           LeadType[] @relation("PipelineLeadType")
+  defaultForLeadTypes LeadType[] @relation("DefaultPipeline")
+}
+
+model Stage {
+  id          String   @id @default(cuid())
+  pipelineId  String
+  name        String
+  order       Int
+  probability Int      @default(0)
+  color       String   @default("#6366f1")
+  slaHours    Int?
+  isWon       Boolean  @default(false)
+  isLost      Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  pipeline       Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads          Lead[]
+  stageHistories StageHistory[]
+
+  @@index([pipelineId, order])
+}
+
+model Lead {
+  id               String       @id @default(cuid())
+  leadTypeId       String?
+  firstName        String?
+  lastName         String?
+  displayName      String
+  companyName      String?
+  email            String?
+  phone            String?
+  country          String?
+  language         String?
+  source           String?
+  ownerId          String?
+  pipelineId       String?
+  stageId          String?
+  status           LeadStatus   @default(ACTIVE)
+  priority         LeadPriority @default(MEDIUM)
+  potentialAmount  Float?
+  committedAmount  Float?
+  closedAmount     Float?
+  currency         String       @default("USD")
+  probability      Int          @default(0)
+  aiScore          Int?
+  manualScore      Int?
+  referredByLeadId String?
+  tags             String[]
+  nextFollowUpAt   DateTime?
+  lastActivityAt   DateTime?
+  aiSummary        String?      @db.Text
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  createdBy        String?
+
+  leadType       LeadType?          @relation(fields: [leadTypeId], references: [id])
+  owner          User?              @relation("LeadOwner", fields: [ownerId], references: [id])
+  creator        User?              @relation("LeadCreator", fields: [createdBy], references: [id])
+  pipeline       Pipeline?          @relation(fields: [pipelineId], references: [id])
+  stage          Stage?             @relation(fields: [stageId], references: [id])
+  referredBy     Lead?              @relation("LeadReferral", fields: [referredByLeadId], references: [id])
+  referrals      Lead[]             @relation("LeadReferral")
+  activities     Activity[]
+  tasks          Task[]
+  customValues   CustomFieldValue[]
+  aiInsights     AIInsight[]
+  notifications  Notification[]
+  aiCommands     AICommand[]
+  stageHistories StageHistory[]
+
+  @@index([leadTypeId])
+  @@index([ownerId])
+  @@index([pipelineId, stageId])
+  @@index([status])
+  @@index([nextFollowUpAt])
+  @@index([lastActivityAt])
+  @@index([aiScore])
+}
+
+model StageHistory {
+  id        String   @id @default(cuid())
+  leadId    String
+  stageId   String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  lead  Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  stage Stage @relation(fields: [stageId], references: [id])
+
+  @@index([leadId])
+}
+
+model Activity {
+  id         String       @id @default(cuid())
+  leadId     String
+  userId     String?
+  type       ActivityType
+  title      String?
+  content    String?      @db.Text
+  occurredAt DateTime     @default(now())
+  metadata   Json?
+  createdAt  DateTime     @default(now())
+
+  lead Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([leadId, occurredAt])
+  @@index([type])
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  leadId       String?
+  assignedTo   String?
+  createdBy    String?
+  title        String
+  description  String?      @db.Text
+  type         TaskType     @default(OTHER)
+  priority     TaskPriority @default(NORMAL)
+  dueAt        DateTime?
+  status       TaskStatus   @default(OPEN)
+  completedAt  DateTime?
+  snoozedUntil DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  lead     Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignee User? @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  creator  User? @relation("TaskCreator", fields: [createdBy], references: [id])
+
+  @@index([assignedTo, status])
+  @@index([leadId])
+  @@index([dueAt])
+  @@index([status])
+}
+
+model CustomFieldDefinition {
+  id                  String    @id @default(cuid())
+  entityType          String    @default("Lead")
+  leadTypeId          String?
+  key                 String
+  label               String
+  fieldType           FieldType
+  options             Json?
+  isRequired          Boolean   @default(false)
+  isSensitive         Boolean   @default(false)
+  editableByAI        Boolean   @default(true)
+  visibleInCreateForm Boolean   @default(true)
+  order               Int       @default(0)
+  createdAt           DateTime  @default(now())
+
+  leadType LeadType?         @relation(fields: [leadTypeId], references: [id])
+  values   CustomFieldValue[]
+
+  @@unique([leadTypeId, key])
+  @@index([leadTypeId])
+}
+
+model CustomFieldValue {
+  id                String   @id @default(cuid())
+  entityType        String   @default("Lead")
+  entityId          String
+  fieldDefinitionId String
+  value             String?  @db.Text
+  updatedAt         DateTime @updatedAt
+
+  lead            Lead?                 @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  fieldDefinition CustomFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, fieldDefinitionId])
+  @@index([entityId])
+}
+
+model AICommand {
+  id                   String          @id @default(cuid())
+  userId               String?
+  leadId               String?
+  inputType            String
+  originalText         String?         @db.Text
+  transcript           String?         @db.Text
+  detectedIntent       String?
+  confidence           Float?
+  extractedData        Json?
+  proposedActions      Json?
+  executedActions      Json?
+  status               AICommandStatus @default(PENDING)
+  requiresConfirmation Boolean         @default(false)
+  userFacingSummary    String?         @db.Text
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AIInsight {
+  id                String            @id @default(cuid())
+  leadId            String?
+  userId            String?
+  type              AIInsightType
+  severity          AIInsightSeverity
+  title             String
+  message           String            @db.Text
+  recommendedAction String?
+  status            AIInsightStatus   @default(ACTIVE)
+  createdAt         DateTime          @default(now())
+  dismissedAt       DateTime?
+  actedUponAt       DateTime?
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([status])
+  @@index([type])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  leadId    String?
+  type      NotificationType
+  title     String
+  message   String
+  readAt    DateTime?
+  actionUrl String?
+  createdAt DateTime         @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+}
+
+model AutomationRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  trigger     String
+  conditions  Json
+  actions     Json
+  isActive    Boolean  @default(true)
+  leadTypeId  String?
+  pipelineId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([trigger, isActive])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorType   String   @default("user")
+  entityType  String
+  entityId    String?
+  action      String
+  before      Json?
+  after       Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
