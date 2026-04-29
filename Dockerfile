@@ -13,6 +13,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV OPENAI_API_KEY=build-placeholder
+ENV DATABASE_URL=postgresql://placeholder:placeholder@placeholder/placeholder
+ENV NEXTAUTH_SECRET=build-placeholder-secret-32-chars-min
 RUN npm run build
 
 FROM base AS runner
