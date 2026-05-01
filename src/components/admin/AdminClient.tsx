@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Users, Layers, GitBranch, Zap, Plus, Loader2 } from "lucide-react";
+import {
+  Users, Layers, GitBranch, Zap, Plus, Loader2,
+  Pencil, Trash2, CheckCircle, XCircle, Shield,
+  Eye, UserCheck, UserX, MoreVertical, X, Save,
+  Settings, Activity, TrendingUp,
+} from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface User {
@@ -12,54 +17,46 @@ interface User {
   role: string;
   status: string;
   createdAt: string;
+  _count?: { ownedLeads: number; assignedTasks: number };
 }
-
-interface LeadType {
-  id: string;
-  name: string;
-  description: string | null;
-  isActive: boolean;
-  color: string;
-}
-
-interface Stage {
-  id: string;
-  name: string;
-  order: number;
-  probability: number;
-  color: string;
-  isWon: boolean;
-  isLost: boolean;
-}
-
-interface Pipeline {
-  id: string;
-  name: string;
-  description: string | null;
-  stages: Stage[];
-}
-
-interface AutomationRule {
-  id: string;
-  name: string;
-  trigger: string;
-  isActive: boolean;
-  createdAt: string;
-}
+interface LeadType { id: string; name: string; description: string | null; isActive: boolean; color: string; }
+interface Stage { id: string; name: string; order: number; probability: number; color: string; isWon: boolean; isLost: boolean; }
+interface Pipeline { id: string; name: string; description: string | null; stages: Stage[]; }
+interface AutomationRule { id: string; name: string; trigger: string; isActive: boolean; createdAt: string; }
+interface Stats { totalLeads: number; activeUsers: number; openTasks: number; }
 
 interface Props {
   users: User[];
   leadTypes: LeadType[];
   pipelines: Pipeline[];
   automationRules: AutomationRule[];
+  stats: Stats;
+  currentUserId: string;
 }
 
-export default function AdminClient({ users: initialUsers, leadTypes, pipelines, automationRules }: Props) {
-  const [tab, setTab] = useState<"users" | "lead-types" | "pipelines" | "automations">("users");
-  const [users, setUsers] = useState(initialUsers);
+type Tab = "overview" | "users" | "lead-types" | "pipelines" | "automations";
+
+const roleConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Shield }> = {
+  ADMIN: { label: "Admin", color: "#dc2626", bg: "#fee2e2", icon: Shield },
+  MANAGER: { label: "Manager", color: "#d97706", bg: "#fef3c7", icon: UserCheck },
+  AGENT: { label: "Agent", color: "#2563eb", bg: "#dbeafe", icon: Users },
+  VIEWER: { label: "Viewer", color: "#6b7280", bg: "#f3f4f6", icon: Eye },
+};
+
+const inp = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white";
+const btn = "px-4 py-2 text-sm font-semibold rounded-lg transition active:scale-95";
+
+export default function AdminClient({ users: init, leadTypes, pipelines, automationRules, stats, currentUserId }: Props) {
+  const [tab, setTab] = useState<Tab>("overview");
+  const [users, setUsers] = useState(init);
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
   const [submitting, setSubmitting] = useState(false);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editRole, setEditRole] = useState("");
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [rules, setRules] = useState(automationRules);
 
   async function createUser() {
     setSubmitting(true);
@@ -71,67 +68,217 @@ export default function AdminClient({ users: initialUsers, leadTypes, pipelines,
       });
       const result = await res.json();
       if (result.success) {
-        setUsers((u) => [result.data, ...u]);
+        setUsers((u) => [{ ...result.data, createdAt: new Date().toISOString(), status: "active" }, ...u]);
         setNewUser({ name: "", email: "", password: "", role: "AGENT" });
         setShowNewUser(false);
-        toast.success("User created");
+        toast.success("User created successfully");
       } else {
-        toast.error(result.error ?? "Failed");
+        toast.error(result.error ?? "Failed to create user");
       }
-    } catch {
-      toast.error("Network error");
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { toast.error("Network error"); }
+    finally { setSubmitting(false); }
   }
 
-  const tabs = [
+  async function updateUserRole(userId: string, role: string) {
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setUsers((u) => u.map((usr) => usr.id === userId ? { ...usr, role } : usr));
+        setEditingUser(null);
+        toast.success("Role updated");
+      } else { toast.error(result.error ?? "Failed"); }
+    } catch { toast.error("Network error"); }
+  }
+
+  async function toggleUserStatus(userId: string, currentStatus: string) {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setUsers((u) => u.map((usr) => usr.id === userId ? { ...usr, status: newStatus } : usr));
+        toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
+      } else { toast.error(result.error ?? "Failed"); }
+    } catch { toast.error("Network error"); }
+    setOpenMenu(null);
+  }
+
+  async function deleteUser(userId: string) {
+    setDeletingUser(userId);
+    try {
+      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      const result = await res.json();
+      if (result.success) {
+        setUsers((u) => u.filter((usr) => usr.id !== userId));
+        toast.success("User deleted");
+      } else { toast.error(result.error ?? "Failed to delete user"); }
+    } catch { toast.error("Network error"); }
+    finally { setDeletingUser(null); setOpenMenu(null); }
+  }
+
+  const tabs: { key: Tab; label: string; icon: typeof Users; count?: number }[] = [
+    { key: "overview", label: "Overview", icon: Activity },
     { key: "users", label: "Users", icon: Users, count: users.length },
     { key: "lead-types", label: "Lead Types", icon: Layers, count: leadTypes.length },
     { key: "pipelines", label: "Pipelines", icon: GitBranch, count: pipelines.length },
-    { key: "automations", label: "Automations", icon: Zap, count: automationRules.length },
-  ] as const;
-
-  const inp = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500";
+    { key: "automations", label: "Automations", icon: Zap, count: rules.length },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+    <div className="space-y-5">
+      {/* Tab Bar */}
+      <div className="flex gap-1 bg-white border border-gray-200 p-1 rounded-xl shadow-sm w-fit">
         {tabs.map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${tab === key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+              tab === key
+                ? "text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+            }`}
+            style={tab === key ? { background: "linear-gradient(135deg,#6366f1,#8b5cf6)" } : {}}
           >
             <Icon className="w-4 h-4" />
             {label}
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"}`}>
-              {count}
-            </span>
+            {count !== undefined && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                tab === key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+              }`}>
+                {count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Users */}
+      {/* ── OVERVIEW ── */}
+      {tab === "overview" && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { label: "Total Leads", value: stats.totalLeads, icon: TrendingUp, color: "#6366f1", bg: "#eef2ff" },
+              { label: "Active Users", value: stats.activeUsers, icon: Users, color: "#10b981", bg: "#d1fae5" },
+              { label: "Open Tasks", value: stats.openTasks, icon: Zap, color: "#f59e0b", bg: "#fef3c7" },
+            ].map(({ label, value, icon: Icon, color, bg }) => (
+              <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: bg }}>
+                  <Icon className="w-6 h-6" style={{ color }} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{value}</p>
+                  <p className="text-sm text-gray-500">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Recent users */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900">Recent Team Members</h3>
+                <button onClick={() => setTab("users")} className="text-xs font-semibold text-indigo-600 hover:underline">
+                  Manage →
+                </button>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {users.slice(0, 5).map((u) => {
+                  const rc = roleConfig[u.role] ?? roleConfig.VIEWER;
+                  const RIcon = rc.icon;
+                  return (
+                    <div key={u.id} className="px-5 py-3 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                        style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                        {u.name[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{u.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                      </div>
+                      <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg"
+                        style={{ background: rc.bg, color: rc.color }}>
+                        <RIcon className="w-3 h-3" />
+                        {rc.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Pipelines summary */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900">Pipelines</h3>
+                <button onClick={() => setTab("pipelines")} className="text-xs font-semibold text-indigo-600 hover:underline">
+                  View all →
+                </button>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {pipelines.map((p) => (
+                  <div key={p.id} className="px-5 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                      <span className="text-xs text-gray-400">{p.stages.length} stages</span>
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {p.stages.slice(0, 8).map((s) => (
+                        <span key={s.id} className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: s.color }} title={s.name} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── USERS ── */}
       {tab === "users" && (
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Team Members</h3>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-gray-900">Team Members</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{users.length} users total</p>
+            </div>
             <button
               onClick={() => setShowNewUser(!showNewUser)}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className={`${btn} flex items-center gap-2 text-white`}
+              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
             >
               <Plus className="w-4 h-4" /> Add User
             </button>
           </div>
 
+          {/* New user form */}
           {showNewUser && (
-            <div className="p-4 border-b border-gray-100 bg-gray-50 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <input value={newUser.name} onChange={(e) => setNewUser((u) => ({ ...u, name: e.target.value }))} placeholder="Full name" className={inp} />
-                <input value={newUser.email} onChange={(e) => setNewUser((u) => ({ ...u, email: e.target.value }))} placeholder="Email" type="email" className={inp} />
-                <input value={newUser.password} onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))} placeholder="Password (min 8 chars)" type="password" className={inp} />
+            <div className="px-5 py-4 border-b border-gray-100 bg-indigo-50/40">
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-semibold text-sm text-gray-900">New Team Member</p>
+                <button onClick={() => setShowNewUser(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <input value={newUser.name} onChange={(e) => setNewUser((u) => ({ ...u, name: e.target.value }))}
+                  placeholder="Full name" className={inp} />
+                <input value={newUser.email} onChange={(e) => setNewUser((u) => ({ ...u, email: e.target.value }))}
+                  placeholder="Email address" type="email" className={inp} />
+                <input value={newUser.password} onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))}
+                  placeholder="Password (min 8 chars)" type="password" className={inp} />
                 <select value={newUser.role} onChange={(e) => setNewUser((u) => ({ ...u, role: e.target.value }))} className={inp}>
                   <option value="AGENT">Sales Agent</option>
                   <option value="MANAGER">Sales Manager</option>
@@ -140,87 +287,205 @@ export default function AdminClient({ users: initialUsers, leadTypes, pipelines,
                 </select>
               </div>
               <div className="flex gap-2">
-                <button onClick={createUser} disabled={submitting || !newUser.name || !newUser.email || !newUser.password} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg disabled:opacity-40 flex items-center gap-1">
-                  {submitting && <Loader2 className="w-3 h-3 animate-spin" />}
-                  Create User
+                <button
+                  onClick={createUser}
+                  disabled={submitting || !newUser.name || !newUser.email || !newUser.password}
+                  className={`${btn} flex items-center gap-2 text-white disabled:opacity-40`}
+                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
+                >
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <Save className="w-3.5 h-3.5" /> Create User
                 </button>
-                <button onClick={() => setShowNewUser(false)} className="px-4 py-2 border border-gray-200 text-sm rounded-lg">Cancel</button>
+                <button onClick={() => setShowNewUser(false)} className={`${btn} border border-gray-200 text-gray-600`}>
+                  Cancel
+                </button>
               </div>
             </div>
           )}
 
+          {/* Users table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Name</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Email</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Role</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Joined</th>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-5 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">User</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Role</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Status</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Leads</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Joined</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.role === "ADMIN" ? "bg-red-100 text-red-700" : user.role === "MANAGER" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${user.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-400">{formatDate(user.createdAt)}</td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-gray-50">
+                {users.map((user) => {
+                  const rc = roleConfig[user.role] ?? roleConfig.VIEWER;
+                  const RIcon = rc.icon;
+                  const isDeleting = deletingUser === user.id;
+                  const isMe = user.id === currentUserId;
+
+                  return (
+                    <tr key={user.id} className={`hover:bg-gray-50 transition ${user.status === "inactive" ? "opacity-50" : ""}`}>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                            {user.name[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{user.name} {isMe && <span className="text-xs text-indigo-500">(you)</span>}</p>
+                            <p className="text-xs text-gray-400">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {editingUser === user.id ? (
+                          <div className="flex items-center gap-2">
+                            <select value={editRole} onChange={(e) => setEditRole(e.target.value)}
+                              className="text-xs px-2 py-1 border border-indigo-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                              {Object.entries(roleConfig).map(([k, v]) => (
+                                <option key={k} value={k}>{v.label}</option>
+                              ))}
+                            </select>
+                            <button onClick={() => updateUserRole(user.id, editRole)}
+                              className="p-1 text-indigo-600 hover:text-indigo-800">
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setEditingUser(null)}
+                              className="p-1 text-gray-400 hover:text-gray-600">
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { if (!isMe) { setEditingUser(user.id); setEditRole(user.role); } }}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg hover:opacity-80 transition"
+                            style={{ background: rc.bg, color: rc.color }}
+                          >
+                            <RIcon className="w-3 h-3" />
+                            {rc.label}
+                            {!isMe && <Pencil className="w-2.5 h-2.5 opacity-50" />}
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`flex items-center gap-1 text-xs font-semibold w-fit px-2.5 py-1 rounded-full ${
+                          user.status === "active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-gray-100 text-gray-500"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${user.status === "active" ? "bg-emerald-500" : "bg-gray-400"}`} />
+                          {user.status === "active" ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {user._count?.ownedLeads ?? 0}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-400">
+                        {formatDate(user.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!isMe && (
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenMenu(openMenu === user.id ? null : user.id)}
+                              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {openMenu === user.id && (
+                              <div className="absolute right-0 top-8 z-10 bg-white rounded-xl shadow-xl border border-gray-100 w-44 overflow-hidden">
+                                <button
+                                  onClick={() => toggleUserStatus(user.id, user.status)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-50 transition"
+                                >
+                                  {user.status === "active"
+                                    ? <><UserX className="w-4 h-4 text-orange-500" /> Deactivate</>
+                                    : <><UserCheck className="w-4 h-4 text-green-500" /> Activate</>
+                                  }
+                                </button>
+                                <button
+                                  onClick={() => deleteUser(user.id)}
+                                  disabled={isDeleting}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition border-t border-gray-100"
+                                >
+                                  {isDeleting
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <Trash2 className="w-4 h-4" />
+                                  }
+                                  Delete user
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Lead Types */}
+      {/* ── LEAD TYPES ── */}
       {tab === "lead-types" && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">Lead Types</h3>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <h3 className="font-bold text-gray-900 mb-4">Lead Types</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {leadTypes.map((lt) => (
-              <div key={lt.id} className="border border-gray-200 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: lt.color }} />
-                  <h4 className="font-semibold text-gray-900">{lt.name}</h4>
-                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${lt.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {lt.isActive ? "Active" : "Inactive"}
-                  </span>
+              <div key={lt.id} className="border border-gray-100 rounded-xl p-5 hover:shadow-md transition">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: `${lt.color}20` }}>
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: lt.color }} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900">{lt.name}</h4>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${lt.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                      {lt.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
                 </div>
                 {lt.description && <p className="text-sm text-gray-500">{lt.description}</p>}
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <div className="w-full h-2 rounded-full" style={{ backgroundColor: `${lt.color}30` }}>
+                    <div className="h-2 rounded-full" style={{ backgroundColor: lt.color, width: "100%" }} />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Pipelines */}
+      {/* ── PIPELINES ── */}
       {tab === "pipelines" && (
         <div className="space-y-4">
           {pipelines.map((pipeline) => (
-            <div key={pipeline.id} className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">{pipeline.name}</h3>
-              <div className="flex flex-wrap gap-2">
-                {pipeline.stages.map((stage) => (
-                  <div
-                    key={stage.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border"
-                    style={{ borderColor: stage.color, backgroundColor: `${stage.color}15` }}
-                  >
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                    <span className="font-medium" style={{ color: stage.color }}>{stage.name}</span>
-                    <span className="text-xs opacity-60">{stage.probability}%</span>
+            <div key={pipeline.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900 text-lg">{pipeline.name}</h3>
+                <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">
+                  {pipeline.stages.length} stages
+                </span>
+              </div>
+              <div className="flex items-center gap-0 overflow-x-auto pb-2">
+                {pipeline.stages.map((stage, idx) => (
+                  <div key={stage.id} className="flex items-center flex-shrink-0">
+                    <div className="text-center">
+                      <div
+                        className="px-4 py-2 rounded-lg text-white text-xs font-semibold whitespace-nowrap"
+                        style={{ backgroundColor: stage.color }}
+                      >
+                        {stage.name}
+                        <span className="ml-2 opacity-70">{stage.probability}%</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1">Stage {idx + 1}</p>
+                    </div>
+                    {idx < pipeline.stages.length - 1 && (
+                      <div className="w-6 h-0.5 mx-1 flex-shrink-0" style={{ backgroundColor: pipeline.stages[idx + 1].color, opacity: 0.4 }} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -229,27 +494,40 @@ export default function AdminClient({ users: initialUsers, leadTypes, pipelines,
         </div>
       )}
 
-      {/* Automations */}
+      {/* ── AUTOMATIONS ── */}
       {tab === "automations" && (
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="p-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Automation Rules</h3>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-bold text-gray-900">Automation Rules</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Automatic actions triggered by pipeline events</p>
           </div>
           <div className="divide-y divide-gray-50">
-            {automationRules.map((rule) => (
-              <div key={rule.id} className="p-4 flex items-center gap-4">
-                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${rule.isActive ? "bg-green-500" : "bg-gray-300"}`} />
-                <div className="flex-1">
-                  <p className="font-medium text-sm text-gray-900">{rule.name}</p>
-                  <p className="text-xs text-gray-400">Trigger: {rule.trigger}</p>
+            {rules.map((rule) => (
+              <div key={rule.id} className="px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition">
+                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${rule.isActive ? "bg-emerald-500" : "bg-gray-300"}`} />
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0"
+                  style={{ background: rule.isActive ? "#eef2ff" : "#f3f4f6" }}>
+                  <Zap className={`w-5 h-5 ${rule.isActive ? "text-indigo-600" : "text-gray-400"}`} />
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${rule.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                  {rule.isActive ? "Active" : "Inactive"}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-gray-900">{rule.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Trigger: <span className="font-mono">{rule.trigger}</span></p>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                    rule.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
+                  }`}>
+                    {rule.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <p className="text-xs text-gray-300">{formatDate(rule.createdAt)}</p>
+                </div>
               </div>
             ))}
-            {automationRules.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">No automation rules</p>
+            {rules.length === 0 && (
+              <div className="flex flex-col items-center py-12 gap-2 text-gray-400">
+                <Zap className="w-8 h-8 opacity-30" />
+                <p className="text-sm">No automation rules configured</p>
+              </div>
             )}
           </div>
         </div>

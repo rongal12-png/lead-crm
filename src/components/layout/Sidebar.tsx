@@ -4,102 +4,97 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
-  BarChart3,
-  Users,
-  Kanban,
-  CheckSquare,
-  TrendingUp,
-  Settings,
-  Mic,
-  Bell,
-  LogOut,
-  ChevronDown,
-  Building2,
+  LayoutDashboard, Users, Columns3, CheckSquare,
+  TrendingUp, Bot, Settings2, LogOut, ChevronDown,
+  Zap, ChevronRight,
 } from "lucide-react";
-import { cn, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import { useState } from "react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
+const nav = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: Users },
-  { href: "/pipeline", label: "Pipeline", icon: Kanban },
+  { href: "/pipeline", label: "Pipeline", icon: Columns3 },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/reports", label: "Reports", icon: TrendingUp },
-  { href: "/ai", label: "AI Assistant", icon: Mic },
+  { href: "/ai", label: "AI Assistant", icon: Bot },
 ];
 
-const adminItems = [
-  { href: "/admin", label: "Settings", icon: Settings },
+const adminNav = [
+  { href: "/admin", label: "Back Office", icon: Settings2 },
 ];
+
+const roleColors: Record<string, string> = {
+  ADMIN: "bg-red-500",
+  MANAGER: "bg-orange-500",
+  AGENT: "bg-indigo-500",
+  VIEWER: "bg-gray-500",
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN";
-  const isManager = session?.user?.role === "MANAGER" || isAdmin;
+  const role = session?.user?.role ?? "AGENT";
+  const initials = getInitials(session?.user?.name ?? "U");
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
+    <aside
+      className="w-60 flex flex-col min-h-screen fixed left-0 top-0 z-30 select-none"
+      style={{ background: "#1b1c2e" }}
+    >
       {/* Logo */}
-      <div className="p-6 border-b border-gray-800">
+      <div className="px-5 py-5 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-white" />
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
+          >
+            <Zap className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-sm">Lead CRM</p>
-            <p className="text-xs text-gray-400">AI Sales Platform</p>
+            <p className="text-white font-bold text-[15px] leading-tight tracking-tight">LeadOS</p>
+            <p className="text-[#5d627a] text-[11px] font-medium">AI Sales Platform</p>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+      {/* Main nav */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <p className="text-[10px] font-bold text-[#3d4262] uppercase tracking-widest px-3 mb-2">
+          Menu
+        </p>
+        {nav.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                active
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
-              )}
+              key={href}
+              href={href}
+              className={`nav-item ${active ? "active" : ""}`}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {item.label}
+              <Icon className="w-[17px] h-[17px] flex-shrink-0" />
+              <span className="flex-1">{label}</span>
+              {active && <ChevronRight className="w-3.5 h-3.5 opacity-40" />}
             </Link>
           );
         })}
 
         {isAdmin && (
           <>
-            <div className="pt-4 pb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">
-                Admin
+            <div className="pt-5 pb-2">
+              <p className="text-[10px] font-bold text-[#3d4262] uppercase tracking-widest px-3">
+                Administration
               </p>
             </div>
-            {adminItems.map((item) => {
-              const Icon = item.icon;
-              const active = pathname === item.href;
+            {adminNav.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname.startsWith(href + "/");
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    active
-                      ? "bg-indigo-600 text-white"
-                      : "text-gray-400 hover:text-white hover:bg-gray-800"
-                  )}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  {item.label}
+                <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`}>
+                  <Icon className="w-[17px] h-[17px] flex-shrink-0" />
+                  <span className="flex-1">{label}</span>
+                  {active && <ChevronRight className="w-3.5 h-3.5 opacity-40" />}
                 </Link>
               );
             })}
@@ -107,28 +102,31 @@ export default function Sidebar() {
         )}
       </nav>
 
-      {/* User Menu */}
-      <div className="p-4 border-t border-gray-800">
+      {/* User */}
+      <div className="px-3 py-4 border-t border-white/[0.06]">
         <div className="relative">
           <button
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800 transition"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.06] transition"
           >
-            <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {getInitials(session?.user?.name ?? "U")}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${roleColors[role] ?? "bg-indigo-500"}`}>
+              {initials}
             </div>
             <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-medium truncate">{session?.user?.name}</p>
-              <p className="text-xs text-gray-400 capitalize">{session?.user?.role?.toLowerCase()}</p>
+              <p className="text-[13px] font-semibold text-white truncate">{session?.user?.name}</p>
+              <p className="text-[11px] text-[#5d627a] capitalize">{role.toLowerCase()}</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#5d627a] flex-shrink-0" />
           </button>
 
-          {userMenuOpen && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          {menuOpen && (
+            <div
+              className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden border border-white/10"
+              style={{ background: "#252740" }}
+            >
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-gray-700 transition"
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-white/[0.05] transition"
               >
                 <LogOut className="w-4 h-4" />
                 Sign out
