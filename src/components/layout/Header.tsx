@@ -63,7 +63,7 @@ export default function Header({ title }: { title: string }) {
   }
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm">
+    <header className="h-14 bg-white flex items-center justify-between px-6 sticky top-0 z-20" style={{ borderBottom: "1px solid #f0f0f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
       <h1 className="text-[17px] font-bold text-gray-900 tracking-tight">{title}</h1>
 
       <div className="flex items-center gap-2">
