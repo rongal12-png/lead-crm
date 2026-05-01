@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { getInitials } from "@/lib/utils";
+import VoiceCommandButton from "@/components/ai/VoiceCommandButton";
 
 interface Notification {
   id: string;
@@ -95,6 +96,9 @@ export default function Header({ title }: { title: string }) {
             <Search className="w-4.5 h-4.5" />
           </button>
         )}
+
+        {/* Voice Command */}
+        <VoiceCommandButton />
 
         {/* New Lead */}
         <Link
