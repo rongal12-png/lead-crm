@@ -85,7 +85,7 @@ interface Props {
   lead: Lead;
   agents: { id: string; name: string }[];
   currentUserId: string;
-  isManagerOrAdmin: boolean;
+  isAdmin: boolean;
 }
 
 const activityTypeIcon: Record<string, string> = {
@@ -104,7 +104,7 @@ const activityTypeIcon: Record<string, string> = {
   FILE_SENT: "📄",
 };
 
-export default function LeadDetailClient({ lead, agents, currentUserId, isManagerOrAdmin }: Props) {
+export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin }: Props) {
   const router = useRouter();
   const [currentLead, setCurrentLead] = useState(lead);
   const [editMode, setEditMode] = useState(false);

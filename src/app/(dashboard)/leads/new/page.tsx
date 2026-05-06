@@ -8,12 +8,12 @@ export default async function NewLeadPage() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isAdmin = session.user.role === "ADMIN";
 
   const [leadTypes, pipelines, agents] = await Promise.all([
     prisma.leadType.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.pipeline.findMany({ include: { stages: { orderBy: { order: "asc" } } } }),
-    isManagerOrAdmin
+    isAdmin
       ? prisma.user.findMany({ select: { id: true, name: true }, where: { status: "active" }, orderBy: { name: "asc" } })
       : [],
   ]);
@@ -27,7 +27,7 @@ export default async function NewLeadPage() {
           pipelines={pipelines}
           agents={agents}
           currentUserId={session.user.id}
-          isManagerOrAdmin={isManagerOrAdmin}
+          isAdmin={isAdmin}
         />
       </div>
     </div>

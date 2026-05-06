@@ -12,12 +12,12 @@ export default async function LeadsPage({
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isAdmin = session.user.role === "ADMIN";
 
   const [leadTypes, pipelines, users] = await Promise.all([
     prisma.leadType.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.pipeline.findMany({ include: { stages: { orderBy: { order: "asc" } } } }),
-    isManagerOrAdmin
+    isAdmin
       ? prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
       : [],
   ]);
@@ -31,7 +31,7 @@ export default async function LeadsPage({
           pipelines={pipelines}
           agents={users}
           currentUserId={session.user.id}
-          isManagerOrAdmin={isManagerOrAdmin}
+          isAdmin={isAdmin}
           initialSearch={searchParams.search}
         />
       </div>

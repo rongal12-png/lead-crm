@@ -12,7 +12,7 @@ export default async function PipelinePage({
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isAdmin = session.user.role === "ADMIN";
 
   const pipelines = await prisma.pipeline.findMany({
     include: {
@@ -29,7 +29,7 @@ export default async function PipelinePage({
         where: {
           pipelineId: selectedPipeline.id,
           status: "ACTIVE",
-          ...(isManagerOrAdmin ? {} : { ownerId: session.user.id }),
+          ...(isAdmin ? {} : { ownerId: session.user.id }),
         },
         include: {
           leadType: { select: { name: true, color: true } },

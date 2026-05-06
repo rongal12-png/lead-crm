@@ -9,15 +9,14 @@ const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["ADMIN", "MANAGER", "AGENT", "VIEWER"]).default("AGENT"),
+  role: z.enum(["ADMIN", "USER"]).default("USER"),
 });
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
-  if (!isManagerOrAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const users = await prisma.user.findMany({
     select: {

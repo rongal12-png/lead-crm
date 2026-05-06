@@ -40,9 +40,7 @@ type Tab = "overview" | "users" | "lead-types" | "pipelines" | "automations";
 
 const roleConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Shield }> = {
   ADMIN: { label: "Admin", color: "#dc2626", bg: "#fee2e2", icon: Shield },
-  MANAGER: { label: "Manager", color: "#d97706", bg: "#fef3c7", icon: UserCheck },
-  AGENT: { label: "Agent", color: "#2563eb", bg: "#dbeafe", icon: Users },
-  VIEWER: { label: "Viewer", color: "#6b7280", bg: "#f3f4f6", icon: Eye },
+  USER: { label: "User", color: "#2563eb", bg: "#dbeafe", icon: Users },
 };
 
 const inp = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white";
@@ -52,7 +50,7 @@ export default function AdminClient({ users: init, leadTypes, pipelines: pipelin
   const [tab, setTab] = useState<Tab>("overview");
   const [users, setUsers] = useState(init);
   const [showNewUser, setShowNewUser] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "USER" });
   const [submitting, setSubmitting] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editRole, setEditRole] = useState("");
@@ -221,7 +219,7 @@ export default function AdminClient({ users: init, leadTypes, pipelines: pipelin
       const result = await res.json();
       if (result.success) {
         setUsers((u) => [{ ...result.data, createdAt: new Date().toISOString(), status: "active" }, ...u]);
-        setNewUser({ name: "", email: "", password: "", role: "AGENT" });
+        setNewUser({ name: "", email: "", password: "", role: "USER" });
         setShowNewUser(false);
         toast.success("User created successfully");
       } else {
@@ -346,7 +344,7 @@ export default function AdminClient({ users: init, leadTypes, pipelines: pipelin
               </div>
               <div className="divide-y divide-gray-50">
                 {users.slice(0, 5).map((u) => {
-                  const rc = roleConfig[u.role] ?? roleConfig.VIEWER;
+                  const rc = roleConfig[u.role] ?? roleConfig.USER;
                   const RIcon = rc.icon;
                   return (
                     <div key={u.id} className="px-5 py-3 flex items-center gap-3">
@@ -432,10 +430,8 @@ export default function AdminClient({ users: init, leadTypes, pipelines: pipelin
                 <input value={newUser.password} onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))}
                   placeholder="Password (min 8 chars)" type="password" className={inp} />
                 <select value={newUser.role} onChange={(e) => setNewUser((u) => ({ ...u, role: e.target.value }))} className={inp}>
-                  <option value="AGENT">Sales Agent</option>
-                  <option value="MANAGER">Sales Manager</option>
+                  <option value="USER">User</option>
                   <option value="ADMIN">Admin</option>
-                  <option value="VIEWER">Viewer</option>
                 </select>
               </div>
               <div className="flex gap-2">
@@ -470,7 +466,7 @@ export default function AdminClient({ users: init, leadTypes, pipelines: pipelin
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {users.map((user) => {
-                  const rc = roleConfig[user.role] ?? roleConfig.VIEWER;
+                  const rc = roleConfig[user.role] ?? roleConfig.USER;
                   const RIcon = rc.icon;
                   const isDeleting = deletingUser === user.id;
                   const isMe = user.id === currentUserId;

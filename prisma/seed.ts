@@ -19,25 +19,14 @@ async function main() {
     },
   });
 
-  const manager = await prisma.user.upsert({
-    where: { email: "manager@crm.com" },
-    update: {},
-    create: {
-      name: "Sales Manager",
-      email: "manager@crm.com",
-      password: hashedPassword,
-      role: UserRole.MANAGER,
-    },
-  });
-
   const agent = await prisma.user.upsert({
     where: { email: "agent@crm.com" },
     update: {},
     create: {
-      name: "Sales Agent",
+      name: "Sales User",
       email: "agent@crm.com",
       password: hashedPassword,
-      role: UserRole.AGENT,
+      role: UserRole.USER,
     },
   });
 
@@ -362,8 +351,7 @@ async function main() {
   console.log("\n🎉 Seeding complete!");
   console.log("\n📧 Login credentials:");
   console.log("   Admin: admin@crm.com / Admin1234!");
-  console.log("   Manager: manager@crm.com / Admin1234!");
-  console.log("   Agent: agent@crm.com / Admin1234!");
+  console.log("   User:  agent@crm.com / Admin1234!");
 }
 
 main()

@@ -50,10 +50,10 @@ interface Props {
   pipelines: (Pipeline & { stages: Stage[] })[];
   agents: { id: string; name: string }[];
   currentUserId: string;
-  isManagerOrAdmin: boolean;
+  isAdmin: boolean;
 }
 
-export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserId, isManagerOrAdmin }: Props) {
+export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserId, isAdmin }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<string>("");
@@ -250,7 +250,7 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
           </div>
 
           {/* Owner (managers only) */}
-          {isManagerOrAdmin && agents.length > 0 && (
+          {isAdmin && agents.length > 0 && (
             <div>
               <label className={labelCls}>Assigned to</label>
               <select {...register("ownerId")} className={inputCls}>

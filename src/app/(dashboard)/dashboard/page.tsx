@@ -15,18 +15,18 @@ export default async function DashboardPage() {
   if (!session) return null;
 
   const userId = session.user.id;
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
-  const where = isManagerOrAdmin ? { status: "ACTIVE" as const } : { status: "ACTIVE" as const, ownerId: userId };
+  const isAdmin = session.user.role === "ADMIN";
+  const where = isAdmin ? { status: "ACTIVE" as const } : { status: "ACTIVE" as const, ownerId: userId };
 
   const [totalLeads, hotLeads, openTasks, overdueTasks, pipelineAgg, recentActivities, myTasks, insights, topLeads] =
     await Promise.all([
       prisma.lead.count({ where }),
       prisma.lead.count({ where: { ...where, aiScore: { gte: 70 } } }),
-      prisma.task.count({ where: { assignedTo: isManagerOrAdmin ? undefined : userId, status: { in: ["OPEN", "IN_PROGRESS"] } } }),
-      prisma.task.count({ where: { assignedTo: isManagerOrAdmin ? undefined : userId, status: { in: ["OPEN", "IN_PROGRESS"] }, dueAt: { lt: new Date() } } }),
+      prisma.task.count({ where: { assignedTo: isAdmin ? undefined : userId, status: { in: ["OPEN", "IN_PROGRESS"] } } }),
+      prisma.task.count({ where: { assignedTo: isAdmin ? undefined : userId, status: { in: ["OPEN", "IN_PROGRESS"] }, dueAt: { lt: new Date() } } }),
       prisma.lead.aggregate({ where, _sum: { potentialAmount: true, closedAmount: true } }),
       prisma.activity.findMany({
-        where: isManagerOrAdmin ? {} : { lead: { ownerId: userId } },
+        where: isAdmin ? {} : { lead: { ownerId: userId } },
         include: { user: { select: { name: true } }, lead: { select: { id: true, displayName: true } } },
         orderBy: { occurredAt: "desc" },
         take: 8,
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
         take: 5,
       }),
       prisma.aIInsight.findMany({
-        where: { status: "ACTIVE", ...(isManagerOrAdmin ? {} : { userId }) },
+        where: { status: "ACTIVE", ...(isAdmin ? {} : { userId }) },
         include: { lead: { select: { id: true, displayName: true } } },
         orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
         take: 6,

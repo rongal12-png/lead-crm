@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const updateSchema = z.object({
-  role: z.enum(["ADMIN", "MANAGER", "AGENT", "VIEWER"]).optional(),
+  role: z.enum(["ADMIN", "USER"]).optional(),
   status: z.enum(["active", "inactive"]).optional(),
   name: z.string().min(1).optional(),
 });

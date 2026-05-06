@@ -30,7 +30,7 @@ export default function Sidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN";
-  const role = session?.user?.role ?? "AGENT";
+  const role = session?.user?.role ?? "USER";
   const name = session?.user?.name ?? "";
 
   function NavItem({ href, label, icon: Icon, color }: { href: string; label: string; icon: typeof LayoutDashboard; color: string }) {

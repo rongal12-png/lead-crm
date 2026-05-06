@@ -33,10 +33,10 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
 
   if (!lead) notFound();
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
-  if (!isManagerOrAdmin && lead.ownerId !== session.user.id) notFound();
+  const isAdmin = session.user.role === "ADMIN";
+  if (!isAdmin && lead.ownerId !== session.user.id) notFound();
 
-  const agents = isManagerOrAdmin
+  const agents = isAdmin
     ? await prisma.user.findMany({ select: { id: true, name: true }, where: { status: "active" } })
     : [];
 
@@ -48,7 +48,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           lead={JSON.parse(JSON.stringify(lead))}
           agents={agents}
           currentUserId={session.user.id}
-          isManagerOrAdmin={isManagerOrAdmin}
+          isAdmin={isAdmin}
         />
       </div>
     </div>

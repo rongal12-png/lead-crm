@@ -8,11 +8,11 @@ export default async function TasksPage() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isAdmin = session.user.role === "ADMIN";
 
   const tasks = await prisma.task.findMany({
     where: {
-      ...(isManagerOrAdmin ? {} : { assignedTo: session.user.id }),
+      ...(isAdmin ? {} : { assignedTo: session.user.id }),
       status: { in: ["OPEN", "IN_PROGRESS"] },
     },
     include: {

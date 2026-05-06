@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const leadId = searchParams.get("leadId");
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isAdmin = session.user.role === "ADMIN";
 
   const insights = await prisma.aIInsight.findMany({
     where: {
       status: "ACTIVE",
       ...(leadId ? { leadId } : {}),
-      ...(isManagerOrAdmin ? {} : { userId: session.user.id }),
+      ...(isAdmin ? {} : { userId: session.user.id }),
     },
     include: { lead: { select: { id: true, displayName: true } } },
     orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  if (action === "run_job" && (session.user.role === "ADMIN" || session.user.role === "MANAGER")) {
+  if (action === "run_job" && session.user.role === "ADMIN") {
     const count = await runInsightsJob();
     return NextResponse.json({ success: true, data: { insightsCreated: count } });
   }

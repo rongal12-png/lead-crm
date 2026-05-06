@@ -40,8 +40,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
-  if (!isManagerOrAdmin && lead.ownerId !== session.user.id) {
+  const isAdmin = session.user.role === "ADMIN";
+  if (!isAdmin && lead.ownerId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -55,8 +55,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const lead = await prisma.lead.findUnique({ where: { id: params.id } });
   if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
-  if (!isManagerOrAdmin && lead.ownerId !== session.user.id) {
+  const isAdmin = session.user.role === "ADMIN";
+  if (!isAdmin && lead.ownerId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(leadTypeId !== undefined && { leadTypeId }),
       ...(pipelineId !== undefined && { pipelineId }),
       ...(stageId !== undefined && { stageId }),
-      ...(ownerId !== undefined && isManagerOrAdmin && { ownerId }),
+      ...(ownerId !== undefined && isAdmin && { ownerId }),
       ...(priority !== undefined && { priority }),
       ...(status !== undefined && { status }),
       ...(potentialAmount !== undefined && { potentialAmount }),
@@ -123,7 +123,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+  if (session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -23,11 +23,11 @@ export default async function ReportsPage() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
-  const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isAdmin = session.user.role === "ADMIN";
   const userId = session.user.id;
-  const whereLeads = isManagerOrAdmin ? {} : { ownerId: userId };
-  const ownerSql = isManagerOrAdmin ? Prisma.sql`` : Prisma.sql`AND l."ownerId" = ${userId}`;
-  const ownerSqlNoAlias = isManagerOrAdmin ? Prisma.sql`` : Prisma.sql`AND "ownerId" = ${userId}`;
+  const whereLeads = isAdmin ? {} : { ownerId: userId };
+  const ownerSql = isAdmin ? Prisma.sql`` : Prisma.sql`AND l."ownerId" = ${userId}`;
+  const ownerSqlNoAlias = isAdmin ? Prisma.sql`` : Prisma.sql`AND "ownerId" = ${userId}`;
 
   const since90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const since6mo = new Date();
@@ -100,7 +100,7 @@ export default async function ReportsPage() {
       ${ownerSql}
       GROUP BY l."leadTypeId"
     `),
-    isManagerOrAdmin
+    isAdmin
       ? prisma.$queryRaw<Array<{ ownerId: string; total: bigint; won: bigint; revenue: number | null }>>(Prisma.sql`
           SELECT l."ownerId" AS "ownerId",
                  COUNT(*)::bigint AS total,
@@ -121,7 +121,7 @@ export default async function ReportsPage() {
     ]),
     prisma.leadType.findMany({ select: { id: true, name: true, color: true } }),
     prisma.stage.findMany({ select: { id: true, name: true, color: true, order: true, pipelineId: true } }),
-    isManagerOrAdmin
+    isAdmin
       ? prisma.user.findMany({ select: { id: true, name: true } })
       : Promise.resolve([]),
   ]);
@@ -237,7 +237,7 @@ export default async function ReportsPage() {
           </div>
         </div>
 
-        {isManagerOrAdmin && (
+        {isAdmin && (
           <AgentLeaderboard rows={agentRows} />
         )}
       </div>

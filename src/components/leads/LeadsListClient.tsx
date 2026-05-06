@@ -23,7 +23,7 @@ interface Props {
   pipelines: (Pipeline & { stages: Stage[] })[];
   agents: { id: string; name: string }[];
   currentUserId: string;
-  isManagerOrAdmin: boolean;
+  isAdmin: boolean;
   initialSearch?: string;
 }
 
@@ -53,7 +53,7 @@ export default function LeadsListClient({
   pipelines,
   agents,
   currentUserId,
-  isManagerOrAdmin,
+  isAdmin,
   initialSearch,
 }: Props) {
   const router = useRouter();
@@ -189,7 +189,7 @@ export default function LeadsListClient({
               options: availableStages.map((s) => ({ value: s.id, label: s.name })),
               placeholder: "All Stages",
             },
-            ...(isManagerOrAdmin ? [{
+            ...(isAdmin ? [{
               value: filters.ownerId,
               onChange: (v: string) => setFilters((f) => ({ ...f, ownerId: v })),
               options: agents.map((a) => ({ value: a.id, label: a.name })),
