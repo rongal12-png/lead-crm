@@ -1,16 +1,38 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import Header from "@/components/layout/Header";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, Users, CheckSquare, DollarSign, Target, BarChart2 } from "lucide-react";
+import {
+  LeadsOverTimeChart,
+  RevenueByMonthChart,
+  PipelineFunnel,
+  SourceBreakdown,
+  WinRateByType,
+  AgentLeaderboard,
+  type FunnelPoint,
+  type WinRateRow,
+  type AgentRow,
+} from "@/components/reports/ReportsCharts";
+
+const FUNNEL_COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
 
 export default async function ReportsPage() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
   const isManagerOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER";
-  const whereLeads = isManagerOrAdmin ? {} : { ownerId: session.user.id };
+  const userId = session.user.id;
+  const whereLeads = isManagerOrAdmin ? {} : { ownerId: userId };
+  const ownerSql = isManagerOrAdmin ? Prisma.sql`` : Prisma.sql`AND l."ownerId" = ${userId}`;
+  const ownerSqlNoAlias = isManagerOrAdmin ? Prisma.sql`` : Prisma.sql`AND "ownerId" = ${userId}`;
+
+  const since90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const since6mo = new Date();
+  since6mo.setMonth(since6mo.getMonth() - 5);
+  since6mo.setDate(1);
 
   const [
     totalLeads,
@@ -19,10 +41,16 @@ export default async function ReportsPage() {
     lostLeads,
     pipelineValue,
     closedValue,
-    leadsByType,
+    leadsCreatedRaw,
+    revenueByMonthRaw,
     leadsByStage,
+    leadsBySourceRaw,
+    winRateByTypeRaw,
+    agentPerfRaw,
     taskStats,
-    topAgents,
+    leadTypes,
+    stages,
+    users,
   ] = await Promise.all([
     prisma.lead.count({ where: whereLeads }),
     prisma.lead.count({ where: { ...whereLeads, status: "ACTIVE" } }),
@@ -30,58 +58,125 @@ export default async function ReportsPage() {
     prisma.lead.count({ where: { ...whereLeads, stage: { isLost: true } } }),
     prisma.lead.aggregate({ where: { ...whereLeads, status: "ACTIVE" }, _sum: { potentialAmount: true } }),
     prisma.lead.aggregate({ where: { ...whereLeads, stage: { isWon: true } }, _sum: { closedAmount: true } }),
-    prisma.lead.groupBy({
-      by: ["leadTypeId"],
-      where: whereLeads,
-      _count: { id: true },
-      _sum: { potentialAmount: true },
-    }),
+    prisma.$queryRaw<Array<{ bucket: Date; count: bigint }>>(Prisma.sql`
+      SELECT DATE_TRUNC('week', "createdAt") AS bucket, COUNT(*)::bigint AS count
+      FROM "Lead"
+      WHERE "createdAt" >= ${since90}
+      ${ownerSqlNoAlias}
+      GROUP BY bucket
+      ORDER BY bucket ASC
+    `),
+    prisma.$queryRaw<Array<{ bucket: Date; revenue: number | null; deals: bigint }>>(Prisma.sql`
+      SELECT DATE_TRUNC('month', l."updatedAt") AS bucket,
+             COALESCE(SUM(l."closedAmount"), 0)::float8 AS revenue,
+             COUNT(*)::bigint AS deals
+      FROM "Lead" l
+      INNER JOIN "Stage" s ON l."stageId" = s."id"
+      WHERE s."isWon" = true AND l."updatedAt" >= ${since6mo}
+      ${ownerSql}
+      GROUP BY bucket
+      ORDER BY bucket ASC
+    `),
     prisma.lead.groupBy({
       by: ["stageId"],
       where: { ...whereLeads, status: "ACTIVE" },
       _count: { id: true },
       _sum: { potentialAmount: true },
     }),
+    prisma.lead.groupBy({
+      by: ["source"],
+      where: { ...whereLeads, source: { not: null } },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 8,
+    }),
+    prisma.$queryRaw<Array<{ leadTypeId: string | null; total: bigint; won: bigint }>>(Prisma.sql`
+      SELECT l."leadTypeId" AS "leadTypeId",
+             COUNT(*)::bigint AS total,
+             COALESCE(SUM(CASE WHEN s."isWon" THEN 1 ELSE 0 END), 0)::bigint AS won
+      FROM "Lead" l
+      LEFT JOIN "Stage" s ON l."stageId" = s."id"
+      WHERE l."leadTypeId" IS NOT NULL
+      ${ownerSql}
+      GROUP BY l."leadTypeId"
+    `),
+    isManagerOrAdmin
+      ? prisma.$queryRaw<Array<{ ownerId: string; total: bigint; won: bigint; revenue: number | null }>>(Prisma.sql`
+          SELECT l."ownerId" AS "ownerId",
+                 COUNT(*)::bigint AS total,
+                 COALESCE(SUM(CASE WHEN s."isWon" THEN 1 ELSE 0 END), 0)::bigint AS won,
+                 COALESCE(SUM(CASE WHEN s."isWon" THEN l."closedAmount" ELSE 0 END), 0)::float8 AS revenue
+          FROM "Lead" l
+          LEFT JOIN "Stage" s ON l."stageId" = s."id"
+          WHERE l."ownerId" IS NOT NULL
+          GROUP BY l."ownerId"
+          ORDER BY won DESC, total DESC
+          LIMIT 10
+        `)
+      : Promise.resolve([]),
     Promise.all([
       prisma.task.count({ where: { status: { in: ["OPEN", "IN_PROGRESS"] } } }),
       prisma.task.count({ where: { status: "COMPLETED" } }),
       prisma.task.count({ where: { status: { in: ["OPEN", "IN_PROGRESS"] }, dueAt: { lt: new Date() } } }),
     ]),
+    prisma.leadType.findMany({ select: { id: true, name: true, color: true } }),
+    prisma.stage.findMany({ select: { id: true, name: true, color: true, order: true, pipelineId: true } }),
     isManagerOrAdmin
-      ? prisma.user.findMany({
-          where: { role: "AGENT" },
-          select: {
-            id: true,
-            name: true,
-            _count: { select: { ownedLeads: true } },
-          },
-          take: 10,
-        })
-      : [],
+      ? prisma.user.findMany({ select: { id: true, name: true } })
+      : Promise.resolve([]),
   ]);
 
-  const leadTypes = await prisma.leadType.findMany({
-    select: { id: true, name: true, color: true },
-  });
+  const fmtWeek = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fmtMonth = (d: Date) => d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 
-  const stages = await prisma.stage.findMany({
-    select: { id: true, name: true, color: true, pipelineId: true },
-  });
-
-  const leadsByTypeWithNames = leadsByType.map((item) => ({
-    ...item,
-    name: leadTypes.find((lt) => lt.id === item.leadTypeId)?.name ?? "Unknown",
-    color: leadTypes.find((lt) => lt.id === item.leadTypeId)?.color ?? "#6366f1",
+  const leadsCreated = leadsCreatedRaw.map((r) => ({ label: fmtWeek(new Date(r.bucket)), value: Number(r.count) }));
+  const revenueByMonth = revenueByMonthRaw.map((r) => ({
+    label: fmtMonth(new Date(r.bucket)),
+    revenue: Number(r.revenue ?? 0),
+    deals: Number(r.deals),
   }));
 
-  const leadsByStageWithNames = leadsByStage
-    .map((item) => ({
-      ...item,
-      name: stages.find((s) => s.id === item.stageId)?.name ?? "Unknown",
-      color: stages.find((s) => s.id === item.stageId)?.color ?? "#6366f1",
+  const stageOrder = new Map(stages.map((s) => [s.id, s.order]));
+  const stageMeta = new Map(stages.map((s) => [s.id, s]));
+  const funnelData: FunnelPoint[] = leadsByStage
+    .filter((row) => row.stageId)
+    .map((row) => ({
+      name: stageMeta.get(row.stageId!)?.name ?? "Unknown",
+      value: row._count.id,
+      fill: stageMeta.get(row.stageId!)?.color ?? "#6366f1",
+      order: stageOrder.get(row.stageId!) ?? 0,
     }))
-    .sort((a, b) => b._count.id - a._count.id)
-    .slice(0, 10);
+    .sort((a, b) => a.order - b.order)
+    .map(({ name, value, fill }, i) => ({ name, value, fill: fill ?? FUNNEL_COLORS[i % FUNNEL_COLORS.length] }));
+
+  const sources = leadsBySourceRaw.map((r) => ({ name: r.source ?? "Unknown", value: r._count.id }));
+
+  const leadTypeMap = new Map(leadTypes.map((lt) => [lt.id, lt]));
+  const winRateRows: WinRateRow[] = winRateByTypeRaw.map((r) => {
+    const lt = r.leadTypeId ? leadTypeMap.get(r.leadTypeId) : null;
+    const total = Number(r.total);
+    const won = Number(r.won);
+    return {
+      name: lt?.name ?? "Unknown",
+      total,
+      won,
+      rate: total > 0 ? Math.round((won / total) * 100) : 0,
+      color: lt?.color ?? "#6366f1",
+    };
+  }).sort((a, b) => b.rate - a.rate);
+
+  const userMap = new Map(users.map((u) => [u.id, u.name]));
+  const agentRows: AgentRow[] = agentPerfRaw.map((r) => {
+    const total = Number(r.total);
+    const won = Number(r.won);
+    return {
+      name: userMap.get(r.ownerId) ?? "Unknown",
+      total,
+      won,
+      revenue: Number(r.revenue ?? 0),
+      rate: total > 0 ? Math.round((won / total) * 100) : 0,
+    };
+  });
 
   const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0;
 
@@ -97,8 +192,7 @@ export default async function ReportsPage() {
   return (
     <div>
       <Header title="Reports & Analytics" />
-      <div className="p-6 space-y-6">
-        {/* KPIs */}
+      <div className="p-6 space-y-6 max-w-[1400px]">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
@@ -114,52 +208,18 @@ export default async function ReportsPage() {
           })}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Leads by Type */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Leads by Type</h3>
-            <div className="space-y-3">
-              {leadsByTypeWithNames.map((item) => (
-                <div key={item.leadTypeId ?? "unknown"}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-gray-700">{item.name}</span>
-                    <div className="flex gap-3 text-gray-500">
-                      <span>{item._count.id} leads</span>
-                      <span>{formatCurrency(item._sum.potentialAmount)}</span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${totalLeads > 0 ? (item._count.id / totalLeads) * 100 : 0}%`,
-                        backgroundColor: item.color,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {leadsByTypeWithNames.length === 0 && <p className="text-sm text-gray-400">No data</p>}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LeadsOverTimeChart data={leadsCreated} />
+          <RevenueByMonthChart data={revenueByMonth} />
+        </div>
 
-          {/* Leads by Stage */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Active Leads by Stage</h3>
-            <div className="space-y-2">
-              {leadsByStageWithNames.map((item) => (
-                <div key={item.stageId ?? "unknown"} className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-sm text-gray-700 flex-1 truncate">{item.name}</span>
-                  <span className="text-sm font-semibold text-gray-900">{item._count.id}</span>
-                  <span className="text-xs text-gray-400">{formatCurrency(item._sum.potentialAmount)}</span>
-                </div>
-              ))}
-              {leadsByStageWithNames.length === 0 && <p className="text-sm text-gray-400">No data</p>}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PipelineFunnel data={funnelData} />
+          <SourceBreakdown data={sources} />
+        </div>
 
-          {/* Task Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <WinRateByType rows={winRateRows} />
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-gray-900 mb-4">Task Statistics</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
@@ -175,30 +235,11 @@ export default async function ReportsPage() {
               ))}
             </div>
           </div>
-
-          {/* Top Agents */}
-          {isManagerOrAdmin && topAgents.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Agent Leaderboard</h3>
-              <div className="space-y-2">
-                {topAgents
-                  .sort((a, b) => b._count.ownedLeads - a._count.ownedLeads)
-                  .map((agent, index) => (
-                    <div key={agent.id} className="flex items-center gap-3">
-                      <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        {index + 1}
-                      </span>
-                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0">
-                        {agent.name[0]}
-                      </div>
-                      <span className="flex-1 text-sm font-medium text-gray-900">{agent.name}</span>
-                      <span className="text-sm text-gray-500">{agent._count.ownedLeads} leads</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
         </div>
+
+        {isManagerOrAdmin && (
+          <AgentLeaderboard rows={agentRows} />
+        )}
       </div>
     </div>
   );

@@ -78,12 +78,12 @@ export default function VoiceCommandButton() {
   function startRecording() {
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) {
-      toast.error("הדפדפן הזה לא תומך בזיהוי דיבור — נסה Chrome או Edge");
+      toast.error("This browser does not support speech recognition — try Chrome or Edge");
       return;
     }
     try {
       const rec = new Ctor();
-      rec.lang = "he-IL";
+      rec.lang = navigator.language || "en-US";
       rec.interimResults = true;
       rec.continuous = true;
       rec.maxAlternatives = 1;
@@ -105,11 +105,11 @@ export default function VoiceCommandButton() {
 
       rec.onerror = (e) => {
         if (e.error === "no-speech") {
-          toast.info("לא זוהה דיבור — נסה שוב");
+          toast.info("No speech detected — try again");
         } else if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-          toast.error("גישה למיקרופון נדחתה — אפשר גישה בהגדרות הדפדפן");
+          toast.error("Microphone access denied — enable it in browser settings");
         } else {
-          toast.error(`שגיאה בזיהוי דיבור: ${e.error}`);
+          toast.error(`Speech recognition error: ${e.error}`);
         }
         setPhase("idle");
       };
@@ -127,7 +127,7 @@ export default function VoiceCommandButton() {
       recognitionRef.current = rec;
       setPhase("recording");
     } catch {
-      toast.error("לא הצליח להפעיל את המיקרופון");
+      toast.error("Could not start the microphone");
       setPhase("idle");
     }
   }
@@ -168,7 +168,7 @@ export default function VoiceCommandButton() {
 
   async function confirmAction(confirmed: boolean) {
     if (!confirmed || !result?.commandId) {
-      toast.info("הפעולה בוטלה");
+      toast.info("Action cancelled");
       close();
       return;
     }
@@ -181,7 +181,7 @@ export default function VoiceCommandButton() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("הפעולה בוצעה בהצלחה ✓");
+        toast.success("Action completed");
       } else {
         toast.error(data.error ?? "Failed");
       }
@@ -197,7 +197,7 @@ export default function VoiceCommandButton() {
     <>
       <button
         onClick={() => phase === "idle" ? startRecording() : (phase === "recording" ? stopRecording() : null)}
-        title="פקודה קולית"
+        title="Voice command"
         className="relative flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
         style={
           phase === "recording"
@@ -216,14 +216,14 @@ export default function VoiceCommandButton() {
         ) : (
           <>
             <Mic className="w-4 h-4" />
-            <span className="hidden sm:inline">קול</span>
+            <span className="hidden sm:inline">Voice</span>
           </>
         )}
       </button>
 
       {isOpen && phase === "recording" && interimText && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-2 rounded-xl bg-white shadow-lg border border-gray-200 text-sm text-gray-700">
-          <span className="opacity-60">שומע: </span>
+          <span className="opacity-60">Listening: </span>
           <span className="font-medium">{interimText}</span>
         </div>
       )}
@@ -244,7 +244,7 @@ export default function VoiceCommandButton() {
                   style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-white font-bold text-sm">פקודה קולית AI</span>
+                <span className="text-white font-bold text-sm">AI Voice Command</span>
               </div>
               <button onClick={close} className="text-gray-500 hover:text-white transition p-1">
                 <X className="w-4 h-4" />
@@ -259,8 +259,8 @@ export default function VoiceCommandButton() {
                     <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#6366f1" }} />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-gray-900">מעבד...</p>
-                    <p className="text-sm text-gray-400 mt-1">ה-AI מנתח את הפקודה</p>
+                    <p className="font-bold text-gray-900">Processing...</p>
+                    <p className="text-sm text-gray-400 mt-1">AI is analyzing your command</p>
                   </div>
                 </div>
               )}
@@ -269,7 +269,7 @@ export default function VoiceCommandButton() {
                 <div className="space-y-4">
                   {result.transcript && (
                     <div className="p-3 rounded-xl" style={{ background: "#f8f9fc" }}>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">אמרת</p>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">You said</p>
                       <p className="text-sm font-semibold text-gray-800 italic">&quot;{result.transcript}&quot;</p>
                     </div>
                   )}
@@ -278,7 +278,7 @@ export default function VoiceCommandButton() {
                     <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-red-800 text-sm">הפקודה נכשלה</p>
+                        <p className="font-bold text-red-800 text-sm">Command failed</p>
                         <p className="text-xs text-red-600 mt-0.5">{result.error}</p>
                       </div>
                     </div>
@@ -286,7 +286,7 @@ export default function VoiceCommandButton() {
                     <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
                       <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-emerald-800 text-sm">בוצע ✓</p>
+                        <p className="font-bold text-emerald-800 text-sm">Done</p>
                         <p className="text-xs text-emerald-700 mt-0.5">{result.userFacingSummary}</p>
                       </div>
                     </div>
@@ -296,11 +296,11 @@ export default function VoiceCommandButton() {
                     <button onClick={startRecording}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
                       style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
-                      <Mic className="w-4 h-4" /> הקלט שוב
+                      <Mic className="w-4 h-4" /> Record again
                     </button>
                     <button onClick={close}
                       className="flex-1 py-2.5 rounded-xl text-sm font-bold border-2 border-gray-200 text-gray-600 hover:border-gray-300 transition">
-                      סגור
+                      Close
                     </button>
                   </div>
                 </div>
@@ -310,7 +310,7 @@ export default function VoiceCommandButton() {
                 <div className="space-y-4">
                   {result.transcript && (
                     <div className="p-3 rounded-xl" style={{ background: "#f8f9fc" }}>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">אמרת</p>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">You said</p>
                       <p className="text-sm font-semibold text-gray-800 italic">&quot;{result.transcript}&quot;</p>
                     </div>
                   )}
@@ -318,7 +318,7 @@ export default function VoiceCommandButton() {
                   <div className="p-4 rounded-xl" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
                     <div className="flex items-center gap-2 mb-3">
                       <AlertTriangle className="w-4 h-4 text-amber-500" />
-                      <p className="font-bold text-amber-800 text-sm">אישור פעולות</p>
+                      <p className="font-bold text-amber-800 text-sm">Confirm actions</p>
                     </div>
                     <div className="space-y-1.5">
                       {result.proposedActions?.map((action, i) => (
@@ -334,12 +334,12 @@ export default function VoiceCommandButton() {
                     <button onClick={() => confirmAction(true)}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
                       style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}>
-                      <CheckCircle className="w-4 h-4" /> אשר
+                      <CheckCircle className="w-4 h-4" /> Confirm
                     </button>
                     <button onClick={() => confirmAction(false)}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
                       style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)" }}>
-                      <XCircle className="w-4 h-4" /> בטל
+                      <XCircle className="w-4 h-4" /> Cancel
                     </button>
                   </div>
                 </div>

@@ -5,28 +5,34 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { calculateLeadScore } from "@/lib/ai/insights";
 
+const blankToUndefined = (v: unknown) =>
+  typeof v === "string" && v.trim() === "" ? undefined : v;
+
 const createLeadSchema = z.object({
-  displayName: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  companyName: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().optional(),
-  country: z.string().optional(),
-  source: z.string().optional(),
-  leadTypeId: z.string().optional(),
-  pipelineId: z.string().optional(),
-  stageId: z.string().optional(),
-  ownerId: z.string().optional(),
+  displayName: z.preprocess(blankToUndefined, z.string().optional()),
+  firstName: z.preprocess(blankToUndefined, z.string().optional()),
+  lastName: z.preprocess(blankToUndefined, z.string().optional()),
+  companyName: z.preprocess(blankToUndefined, z.string().optional()),
+  email: z.preprocess(blankToUndefined, z.string().email().optional()),
+  phone: z.preprocess(blankToUndefined, z.string().optional()),
+  country: z.preprocess(blankToUndefined, z.string().optional()),
+  source: z.preprocess(blankToUndefined, z.string().optional()),
+  leadTypeId: z.preprocess(blankToUndefined, z.string().optional()),
+  pipelineId: z.preprocess(blankToUndefined, z.string().optional()),
+  stageId: z.preprocess(blankToUndefined, z.string().optional()),
+  ownerId: z.preprocess(blankToUndefined, z.string().optional()),
   potentialAmount: z.preprocess(
-    (v) => (v === "" || v === null || v === undefined || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+    (v: unknown) => (v === "" || v === null || v === undefined || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
     z.coerce.number().optional()
   ),
-  currency: z.string().default("USD"),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
-  nextFollowUpAt: z.string().optional(),
+  currency: z.preprocess(blankToUndefined, z.string().optional()),
+  priority: z.preprocess(
+    blankToUndefined,
+    z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional()
+  ),
+  nextFollowUpAt: z.preprocess(blankToUndefined, z.string().optional()),
   tags: z.array(z.string()).optional(),
-  note: z.string().optional(),
+  note: z.preprocess(blankToUndefined, z.string().optional()),
 });
 
 export async function GET(req: NextRequest) {

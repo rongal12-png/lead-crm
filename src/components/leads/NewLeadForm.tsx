@@ -9,25 +9,38 @@ import { toast } from "sonner";
 import { Loader2, ArrowLeft } from "lucide-react";
 import type { LeadType, Pipeline, Stage } from "@prisma/client";
 
+const optionalString = z.preprocess(
+  (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  z.string().optional()
+);
+
+const optionalNumber = z.preprocess(
+  (v: unknown) => (v === "" || v === null || v === undefined || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+  z.coerce.number().optional()
+);
+
 const schema = z.object({
-  displayName: z.string().optional(),
-  companyName: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().optional(),
-  country: z.string().optional(),
-  source: z.string().optional(),
-  leadTypeId: z.string().optional(),
-  pipelineId: z.string().optional(),
-  stageId: z.string().optional(),
-  ownerId: z.string().optional(),
-  potentialAmount: z.preprocess(
-    (v) => (v === "" || v === null || v === undefined || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
-    z.coerce.number().optional()
+  displayName: optionalString,
+  companyName: optionalString,
+  email: z.preprocess(
+    (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().email().optional()
   ),
-  currency: z.string().default("USD"),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
-  nextFollowUpAt: z.string().optional(),
-  note: z.string().optional(),
+  phone: optionalString,
+  country: optionalString,
+  source: optionalString,
+  leadTypeId: optionalString,
+  pipelineId: optionalString,
+  stageId: optionalString,
+  ownerId: optionalString,
+  potentialAmount: optionalNumber,
+  currency: optionalString,
+  priority: z.preprocess(
+    (v: unknown) => (v === "" || v === null || v === undefined ? undefined : v),
+    z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional()
+  ),
+  nextFollowUpAt: optionalString,
+  note: optionalString,
 });
 
 type FormData = z.infer<typeof schema>;
@@ -47,7 +60,6 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { currency: "USD", priority: "MEDIUM" },
   });
 
   const selectedLeadTypeId = watch("leadTypeId");
@@ -73,11 +85,7 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          ownerId: data.ownerId || currentUserId,
-          potentialAmount: data.potentialAmount ? Number(data.potentialAmount) : undefined,
-        }),
+        body: JSON.stringify({ ...data, ownerId: data.ownerId || currentUserId }),
       });
       const result = await res.json();
       if (result.success) {
@@ -213,7 +221,8 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
             </div>
             <div>
               <label className={labelCls}>Currency</label>
-              <select {...register("currency")} className={inputCls}>
+              <select {...register("currency")} className={inputCls} defaultValue="">
+                <option value="">—</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
                 <option value="ILS">ILS</option>
@@ -226,7 +235,8 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Priority</label>
-              <select {...register("priority")} className={inputCls}>
+              <select {...register("priority")} className={inputCls} defaultValue="">
+                <option value="">—</option>
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
