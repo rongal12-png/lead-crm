@@ -6,7 +6,7 @@ import { z } from "zod";
 import { calculateLeadScore } from "@/lib/ai/insights";
 
 const createLeadSchema = z.object({
-  displayName: z.string().min(1),
+  displayName: z.string().optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   companyName: z.string().optional(),
@@ -18,7 +18,10 @@ const createLeadSchema = z.object({
   pipelineId: z.string().optional(),
   stageId: z.string().optional(),
   ownerId: z.string().optional(),
-  potentialAmount: z.number().optional(),
+  potentialAmount: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+    z.coerce.number().optional()
+  ),
   currency: z.string().default("USD"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
   nextFollowUpAt: z.string().optional(),
@@ -117,9 +120,17 @@ export async function POST(req: NextRequest) {
     stageId = defaultStage?.id;
   }
 
+  const fallbackName =
+    data.displayName?.trim() ||
+    [data.firstName, data.lastName].filter(Boolean).join(" ").trim() ||
+    data.companyName?.trim() ||
+    (data.email && data.email.length > 0 ? data.email : undefined) ||
+    data.phone?.trim() ||
+    "New Lead";
+
   const lead = await prisma.lead.create({
     data: {
-      displayName: data.displayName,
+      displayName: fallbackName,
       firstName: data.firstName,
       lastName: data.lastName,
       companyName: data.companyName,

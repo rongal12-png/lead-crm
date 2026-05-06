@@ -10,7 +10,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import type { LeadType, Pipeline, Stage } from "@prisma/client";
 
 const schema = z.object({
-  displayName: z.string().min(1, "Name is required"),
+  displayName: z.string().optional(),
   companyName: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
@@ -20,7 +20,10 @@ const schema = z.object({
   pipelineId: z.string().optional(),
   stageId: z.string().optional(),
   ownerId: z.string().optional(),
-  potentialAmount: z.number().optional(),
+  potentialAmount: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+    z.coerce.number().optional()
+  ),
   currency: z.string().default("USD"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
   nextFollowUpAt: z.string().optional(),
@@ -122,7 +125,7 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
           {/* Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Full Name *</label>
+              <label className={labelCls}>Full Name</label>
               <input {...register("displayName")} placeholder="Daniel Cohen" className={inputCls} />
               {errors.displayName && <p className={errorCls}>{errors.displayName.message}</p>}
             </div>
@@ -202,7 +205,7 @@ export default function NewLeadForm({ leadTypes, pipelines, agents, currentUserI
             <div className="col-span-2">
               <label className={labelCls}>Potential Amount</label>
               <input
-                {...register("potentialAmount", { valueAsNumber: true })}
+                {...register("potentialAmount")}
                 type="number"
                 placeholder="250000"
                 className={inputCls}

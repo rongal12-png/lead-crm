@@ -40,8 +40,8 @@ export default async function DashboardPage() {
       prisma.aIInsight.findMany({
         where: { status: "ACTIVE", ...(isManagerOrAdmin ? {} : { userId }) },
         include: { lead: { select: { id: true, displayName: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 3,
+        orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+        take: 6,
       }),
       prisma.lead.findMany({
         where,
@@ -151,6 +151,53 @@ export default async function DashboardPage() {
             style={{ background: "radial-gradient(circle, #818cf8, transparent)" }} />
         </div>
 
+        {/* AI Recommendations — top of page */}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+          style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,#fef3c7,#fde68a)" }}>
+                <Lightbulb className="w-4 h-4 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-gray-900 text-[15px]">AI Recommendations</h2>
+                <p className="text-xs text-gray-400">Top actions Claude recommends right now</p>
+              </div>
+            </div>
+            <Link href="/ai" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition">
+              View all <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+          {insights.length === 0 ? (
+            <div className="flex flex-col items-center py-10 gap-2 text-gray-300">
+              <Lightbulb className="w-8 h-8 opacity-30" />
+              <p className="text-sm">No recommendations right now — your pipeline is healthy.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+              {insights.map((insight) => {
+                const s = severityStyle(insight.severity);
+                return (
+                  <Link key={insight.id} href={insight.leadId ? `/leads/${insight.leadId}` : "#"}
+                    className="block p-4 rounded-xl border text-sm transition hover:shadow-md hover:-translate-y-0.5"
+                    style={{ background: s.bg, borderColor: s.border, color: s.text }}
+                  >
+                    <p className="font-bold leading-tight">{insight.title}</p>
+                    <p className="mt-1 text-xs opacity-80 line-clamp-2">{insight.message}</p>
+                    {insight.recommendedAction && (
+                      <p className="mt-2 text-xs font-semibold flex items-center gap-1">
+                        <ArrowUpRight className="w-3 h-3" />
+                        {insight.recommendedAction}
+                      </p>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
           {kpis.map((kpi) => {
@@ -231,37 +278,6 @@ export default async function DashboardPage() {
 
           {/* Right column */}
           <div className="space-y-5">
-            {/* AI Insights */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-              style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-              <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50">
-                  <Lightbulb className="w-4 h-4 text-amber-500" />
-                </div>
-                <h2 className="font-bold text-gray-900 text-[15px]">AI Insights</h2>
-              </div>
-              <div className="p-3 space-y-2">
-                {insights.map((insight) => {
-                  const s = severityStyle(insight.severity);
-                  return (
-                    <Link key={insight.id} href={insight.leadId ? `/leads/${insight.leadId}` : "#"}
-                      className="block p-3 rounded-xl border text-xs transition hover:opacity-80"
-                      style={{ background: s.bg, borderColor: s.border, color: s.text }}
-                    >
-                      <p className="font-bold">{insight.title}</p>
-                      <p className="mt-0.5 opacity-75 line-clamp-2">{insight.message}</p>
-                    </Link>
-                  );
-                })}
-                {insights.length === 0 && (
-                  <div className="flex flex-col items-center py-6 gap-2 text-gray-300">
-                    <Lightbulb className="w-6 h-6 opacity-40" />
-                    <p className="text-xs">No active insights</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* My Tasks */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
               style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>

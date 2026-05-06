@@ -6,7 +6,7 @@ import {
   Users, Layers, GitBranch, Zap, Plus, Loader2,
   Pencil, Trash2, CheckCircle, XCircle, Shield,
   Eye, UserCheck, UserX, MoreVertical, X, Save,
-  Settings, Activity, TrendingUp,
+  Settings, Activity, TrendingUp, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -22,6 +22,8 @@ interface User {
 interface LeadType { id: string; name: string; description: string | null; isActive: boolean; color: string; }
 interface Stage { id: string; name: string; order: number; probability: number; color: string; isWon: boolean; isLost: boolean; }
 interface Pipeline { id: string; name: string; description: string | null; stages: Stage[]; }
+
+const STAGE_PALETTE = ["#6366f1", "#3b82f6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
 interface AutomationRule { id: string; name: string; trigger: string; isActive: boolean; createdAt: string; }
 interface Stats { totalLeads: number; activeUsers: number; openTasks: number; }
 
@@ -46,7 +48,7 @@ const roleConfig: Record<string, { label: string; color: string; bg: string; ico
 const inp = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white";
 const btn = "px-4 py-2 text-sm font-semibold rounded-lg transition active:scale-95";
 
-export default function AdminClient({ users: init, leadTypes, pipelines, automationRules, stats, currentUserId }: Props) {
+export default function AdminClient({ users: init, leadTypes, pipelines: pipelinesInit, automationRules, stats, currentUserId }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
   const [users, setUsers] = useState(init);
   const [showNewUser, setShowNewUser] = useState(false);
@@ -57,6 +59,156 @@ export default function AdminClient({ users: init, leadTypes, pipelines, automat
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [rules, setRules] = useState(automationRules);
+  const [pipelines, setPipelines] = useState<Pipeline[]>(pipelinesInit);
+  const [showNewPipeline, setShowNewPipeline] = useState(false);
+  const [newPipelineName, setNewPipelineName] = useState("");
+  const [editingPipeline, setEditingPipeline] = useState<string | null>(null);
+  const [pipelineNameDraft, setPipelineNameDraft] = useState("");
+  const [editingStage, setEditingStage] = useState<string | null>(null);
+  const [stageDraft, setStageDraft] = useState<{ name: string; color: string; probability: number }>({ name: "", color: "#6366f1", probability: 0 });
+  const [addingStageTo, setAddingStageTo] = useState<string | null>(null);
+  const [newStageName, setNewStageName] = useState("");
+
+  async function createPipeline() {
+    if (!newPipelineName.trim()) return;
+    const res = await fetch("/api/pipelines", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newPipelineName.trim() }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setPipelines((ps) => [...ps, result.data]);
+      setNewPipelineName("");
+      setShowNewPipeline(false);
+      toast.success("Pipeline created");
+    } else {
+      toast.error(result.error ?? "Failed to create pipeline");
+    }
+  }
+
+  async function renamePipeline(id: string) {
+    if (!pipelineNameDraft.trim()) return;
+    const res = await fetch(`/api/pipelines/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: pipelineNameDraft.trim() }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setPipelines((ps) => ps.map((p) => p.id === id ? { ...p, name: pipelineNameDraft.trim() } : p));
+      setEditingPipeline(null);
+      toast.success("Pipeline renamed");
+    } else {
+      toast.error(result.error ?? "Failed");
+    }
+  }
+
+  async function deletePipeline(id: string) {
+    if (!confirm("Delete this pipeline? This cannot be undone.")) return;
+    const res = await fetch(`/api/pipelines/${id}`, { method: "DELETE" });
+    const result = await res.json();
+    if (result.success) {
+      setPipelines((ps) => ps.filter((p) => p.id !== id));
+      toast.success("Pipeline deleted");
+    } else {
+      toast.error(result.error ?? "Failed");
+    }
+  }
+
+  async function addStage(pipelineId: string) {
+    if (!newStageName.trim()) return;
+    const res = await fetch(`/api/pipelines/${pipelineId}/stages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newStageName.trim() }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setPipelines((ps) => ps.map((p) => p.id === pipelineId ? { ...p, stages: [...p.stages, result.data] } : p));
+      setNewStageName("");
+      setAddingStageTo(null);
+      toast.success("Stage added");
+    } else {
+      toast.error(result.error ?? "Failed");
+    }
+  }
+
+  function startEditStage(stage: Stage) {
+    setEditingStage(stage.id);
+    setStageDraft({ name: stage.name, color: stage.color, probability: stage.probability });
+  }
+
+  async function saveStage(stageId: string, pipelineId: string) {
+    if (!stageDraft.name.trim()) return;
+    const res = await fetch(`/api/stages/${stageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: stageDraft.name.trim(),
+        color: stageDraft.color,
+        probability: Number(stageDraft.probability),
+      }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setPipelines((ps) => ps.map((p) =>
+        p.id === pipelineId
+          ? { ...p, stages: p.stages.map((s) => s.id === stageId ? { ...s, ...result.data } : s) }
+          : p
+      ));
+      setEditingStage(null);
+      toast.success("Stage updated");
+    } else {
+      toast.error(result.error ?? "Failed");
+    }
+  }
+
+  async function deleteStage(stageId: string, pipelineId: string) {
+    if (!confirm("Delete this stage?")) return;
+    const res = await fetch(`/api/stages/${stageId}`, { method: "DELETE" });
+    const result = await res.json();
+    if (result.success) {
+      setPipelines((ps) => ps.map((p) =>
+        p.id === pipelineId ? { ...p, stages: p.stages.filter((s) => s.id !== stageId) } : p
+      ));
+      toast.success("Stage deleted");
+    } else {
+      toast.error(result.error ?? "Failed");
+    }
+  }
+
+  async function moveStage(stageId: string, pipelineId: string, direction: -1 | 1) {
+    const pipeline = pipelines.find((p) => p.id === pipelineId);
+    if (!pipeline) return;
+    const idx = pipeline.stages.findIndex((s) => s.id === stageId);
+    const swapIdx = idx + direction;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= pipeline.stages.length) return;
+    const a = pipeline.stages[idx];
+    const b = pipeline.stages[swapIdx];
+
+    await Promise.all([
+      fetch(`/api/stages/${a.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: b.order }),
+      }),
+      fetch(`/api/stages/${b.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: a.order }),
+      }),
+    ]);
+
+    setPipelines((ps) => ps.map((p) => {
+      if (p.id !== pipelineId) return p;
+      const stages = [...p.stages];
+      stages[idx] = { ...b, order: a.order };
+      stages[swapIdx] = { ...a, order: b.order };
+      stages.sort((x, y) => x.order - y.order);
+      return { ...p, stages };
+    }));
+  }
 
   async function createUser() {
     setSubmitting(true);
@@ -462,32 +614,196 @@ export default function AdminClient({ users: init, leadTypes, pipelines, automat
       {/* ── PIPELINES ── */}
       {tab === "pipelines" && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">Manage pipelines and their stages.</p>
+            <button
+              onClick={() => setShowNewPipeline((s) => !s)}
+              className={`${btn} flex items-center gap-2 text-white`}
+              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
+            >
+              <Plus className="w-4 h-4" /> New Pipeline
+            </button>
+          </div>
+
+          {showNewPipeline && (
+            <div className="bg-indigo-50/40 border border-indigo-100 rounded-xl p-4 flex items-center gap-2">
+              <input
+                value={newPipelineName}
+                onChange={(e) => setNewPipelineName(e.target.value)}
+                placeholder="Pipeline name"
+                className={inp}
+                onKeyDown={(e) => { if (e.key === "Enter") createPipeline(); }}
+              />
+              <button onClick={createPipeline} className={`${btn} text-white`} style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                Create
+              </button>
+              <button onClick={() => { setShowNewPipeline(false); setNewPipelineName(""); }} className={`${btn} border border-gray-200 text-gray-600`}>
+                Cancel
+              </button>
+            </div>
+          )}
+
           {pipelines.map((pipeline) => (
             <div key={pipeline.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 text-lg">{pipeline.name}</h3>
+              <div className="flex items-center justify-between mb-4 gap-3">
+                {editingPipeline === pipeline.id ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      value={pipelineNameDraft}
+                      onChange={(e) => setPipelineNameDraft(e.target.value)}
+                      className={inp}
+                      autoFocus
+                      onKeyDown={(e) => { if (e.key === "Enter") renamePipeline(pipeline.id); }}
+                    />
+                    <button onClick={() => renamePipeline(pipeline.id)} className="p-1.5 text-indigo-600 hover:text-indigo-800">
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setEditingPipeline(null)} className="p-1.5 text-gray-400 hover:text-gray-600">
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-1">
+                    <h3 className="font-bold text-gray-900 text-lg">{pipeline.name}</h3>
+                    <button
+                      onClick={() => { setEditingPipeline(pipeline.id); setPipelineNameDraft(pipeline.name); }}
+                      className="p-1 text-gray-400 hover:text-indigo-600"
+                      title="Rename pipeline"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
                 <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">
                   {pipeline.stages.length} stages
                 </span>
+                <button
+                  onClick={() => deletePipeline(pipeline.id)}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                  title="Delete pipeline"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <div className="flex items-center gap-0 overflow-x-auto pb-2">
+
+              <div className="space-y-2">
                 {pipeline.stages.map((stage, idx) => (
-                  <div key={stage.id} className="flex items-center flex-shrink-0">
-                    <div className="text-center">
-                      <div
-                        className="px-4 py-2 rounded-lg text-white text-xs font-semibold whitespace-nowrap"
-                        style={{ backgroundColor: stage.color }}
+                  <div key={stage.id} className="flex items-center gap-2 group">
+                    <div className="flex flex-col">
+                      <button
+                        disabled={idx === 0}
+                        onClick={() => moveStage(stage.id, pipeline.id, -1)}
+                        className="p-0.5 text-gray-300 hover:text-indigo-600 disabled:opacity-20"
+                        title="Move up"
                       >
-                        {stage.name}
-                        <span className="ml-2 opacity-70">{stage.probability}%</span>
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1">Stage {idx + 1}</p>
+                        <ChevronLeft className="w-3 h-3 rotate-90" />
+                      </button>
+                      <button
+                        disabled={idx === pipeline.stages.length - 1}
+                        onClick={() => moveStage(stage.id, pipeline.id, 1)}
+                        className="p-0.5 text-gray-300 hover:text-indigo-600 disabled:opacity-20"
+                        title="Move down"
+                      >
+                        <ChevronRight className="w-3 h-3 rotate-90" />
+                      </button>
                     </div>
-                    {idx < pipeline.stages.length - 1 && (
-                      <div className="w-6 h-0.5 mx-1 flex-shrink-0" style={{ backgroundColor: pipeline.stages[idx + 1].color, opacity: 0.4 }} />
+
+                    <span className="text-xs font-semibold text-gray-400 w-6 text-center">{idx + 1}</span>
+
+                    {editingStage === stage.id ? (
+                      <div className="flex items-center gap-2 flex-1 bg-indigo-50/40 rounded-lg p-2 border border-indigo-100">
+                        <input
+                          value={stageDraft.name}
+                          onChange={(e) => setStageDraft((s) => ({ ...s, name: e.target.value }))}
+                          placeholder="Stage name"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          autoFocus
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={stageDraft.probability}
+                          onChange={(e) => setStageDraft((s) => ({ ...s, probability: Number(e.target.value) }))}
+                          className="w-16 px-2 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          title="Probability %"
+                        />
+                        <span className="text-xs text-gray-400">%</span>
+                        <div className="flex items-center gap-1">
+                          {STAGE_PALETTE.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setStageDraft((s) => ({ ...s, color: c }))}
+                              className={`w-5 h-5 rounded-full border-2 transition ${stageDraft.color === c ? "border-gray-900 scale-110" : "border-white"}`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        <button onClick={() => saveStage(stage.id, pipeline.id)} className="p-1 text-indigo-600 hover:text-indigo-800">
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingStage(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div
+                          className="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold flex items-center justify-between"
+                          style={{ backgroundColor: stage.color }}
+                        >
+                          <span>
+                            {stage.name}
+                            {stage.isWon && <span className="ml-2 text-[10px] uppercase bg-white/20 px-1.5 py-0.5 rounded">Won</span>}
+                            {stage.isLost && <span className="ml-2 text-[10px] uppercase bg-white/20 px-1.5 py-0.5 rounded">Lost</span>}
+                          </span>
+                          <span className="opacity-80 text-xs">{stage.probability}%</span>
+                        </div>
+                        <button
+                          onClick={() => startEditStage(stage)}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                          title="Edit stage"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteStage(stage.id, pipeline.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete stage"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
                     )}
                   </div>
                 ))}
+
+                {addingStageTo === pipeline.id ? (
+                  <div className="flex items-center gap-2 mt-3">
+                    <input
+                      value={newStageName}
+                      onChange={(e) => setNewStageName(e.target.value)}
+                      placeholder="New stage name"
+                      className={inp}
+                      autoFocus
+                      onKeyDown={(e) => { if (e.key === "Enter") addStage(pipeline.id); }}
+                    />
+                    <button onClick={() => addStage(pipeline.id)} className={`${btn} text-white`} style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                      Add
+                    </button>
+                    <button onClick={() => { setAddingStageTo(null); setNewStageName(""); }} className={`${btn} border border-gray-200 text-gray-600`}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingStageTo(pipeline.id)}
+                    className="mt-2 flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-semibold"
+                  >
+                    <Plus className="w-4 h-4" /> Add stage
+                  </button>
+                )}
               </div>
             </div>
           ))}
