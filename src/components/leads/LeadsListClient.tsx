@@ -14,9 +14,11 @@ import {
   Flame,
   Clock,
   DollarSign,
+  Upload,
 } from "lucide-react";
 import { formatCurrency, formatRelativeTime, leadTypeColor, priorityColor } from "@/lib/utils";
 import type { LeadType, Pipeline, Stage } from "@prisma/client";
+import ImportCsvDialog from "./ImportCsvDialog";
 
 interface Props {
   leadTypes: LeadType[];
@@ -62,6 +64,7 @@ export default function LeadsListClient({
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const [filters, setFilters] = useState({
     search: initialSearch ?? "",
@@ -162,15 +165,33 @@ export default function LeadsListClient({
           </span>
         </div>
 
-        <Link
-          href="/leads/new"
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl transition hover:opacity-90 active:scale-95 whitespace-nowrap"
-          style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
-        >
-          <Plus className="w-4 h-4" />
-          New Lead
-        </Link>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-indigo-700 bg-white border-2 border-indigo-200 rounded-xl transition hover:bg-indigo-50 hover:border-indigo-300 whitespace-nowrap"
+            >
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </button>
+          )}
+
+          <Link
+            href="/leads/new"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl transition hover:opacity-90 active:scale-95 whitespace-nowrap"
+            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
+          >
+            <Plus className="w-4 h-4" />
+            New Lead
+          </Link>
+        </div>
       </div>
+
+      <ImportCsvDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={fetchLeads}
+      />
 
       {/* Filters Panel */}
       {showFilters && (
