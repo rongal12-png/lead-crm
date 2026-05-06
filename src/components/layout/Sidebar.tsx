@@ -100,7 +100,7 @@ export default function Sidebar() {
       <div className="px-4 pb-2">
         <div className="px-3 py-1.5 rounded-lg text-center"
           style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
-          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.1 • AI Active</p>
+          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2 • AI Active</p>
         </div>
       </div>
 
