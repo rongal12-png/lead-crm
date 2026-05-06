@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 import { AIInsightType, AIInsightSeverity, AIInsightStatus } from "@prisma/client";
-import { anthropic, ANTHROPIC_MODEL, extractText } from "../anthropic";
+import { openai, OPENAI_MODEL } from "../openai";
 
 export async function generateLeadSummary(leadId: string): Promise<string> {
   const lead = await prisma.lead.findUnique({
@@ -44,14 +44,14 @@ ${lead.tasks.map((t) => `- ${t.title} (due: ${t.dueAt ? new Date(t.dueAt).toLoca
 
 Write a concise summary covering: who they are, current status, last interaction, risk level, and recommended next action.`;
 
-  const response = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
+  const response = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
     max_tokens: 400,
     temperature: 0.3,
     messages: [{ role: "user", content: prompt }],
   });
 
-  return extractText(response.content) || "Unable to generate summary";
+  return response.choices[0]?.message?.content ?? "Unable to generate summary";
 }
 
 export async function runInsightsJob(): Promise<number> {

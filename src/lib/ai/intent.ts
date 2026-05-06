@@ -1,4 +1,4 @@
-import { anthropic, ANTHROPIC_MODEL, extractText, extractJSON } from "../anthropic";
+import { openai, OPENAI_MODEL } from "../openai";
 import { prisma } from "../prisma";
 import { ParsedIntent } from "@/types";
 
@@ -45,18 +45,25 @@ User command: "${text}"
 
 Analyze and return JSON only.`;
 
-  const response = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
-    max_tokens: 1000,
+  const response = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    response_format: { type: "json_object" },
     temperature: 0.1,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userPrompt }],
+    max_tokens: 1000,
   });
 
-  const raw = extractText(response.content);
-  const parsed: Record<string, unknown> =
-    extractJSON<Record<string, unknown>>(raw) ??
-    { intent: "GeneralQuery", confidence: 0.3, userFacingSummary: text };
+  const raw = response.choices[0]?.message?.content ?? "{}";
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = { intent: "GeneralQuery", confidence: 0.3, userFacingSummary: text };
+  }
 
   const leadMatchRaw = parsed.leadMatch as { name?: string; company?: string } | null;
   let resolvedLeadMatch: ParsedIntent["leadMatch"] = null;
