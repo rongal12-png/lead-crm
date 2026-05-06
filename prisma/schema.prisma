@@ -506,3 +506,14 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
 }
+
+model WeeklySummary {
+  id          String   @id @default(cuid())
+  weekStart   DateTime @unique
+  weekEnd     DateTime
+  generatedAt DateTime @default(now())
+  data        Json
+  narrative   String?  @db.Text
+
+  @@index([weekEnd])
+}

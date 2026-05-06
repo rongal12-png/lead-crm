@@ -3,8 +3,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import Header from "@/components/layout/Header";
+import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, Users, CheckSquare, DollarSign, Target, BarChart2 } from "lucide-react";
+import { TrendingUp, Users, CheckSquare, DollarSign, Target, BarChart2, Calendar } from "lucide-react";
 import {
   LeadsOverTimeChart,
   RevenueByMonthChart,
@@ -193,6 +194,23 @@ export default async function ReportsPage() {
     <div>
       <Header title="Reports & Analytics" />
       <div className="p-6 space-y-6 max-w-[1400px]">
+        <Link
+          href="/reports/weekly"
+          className="flex items-center justify-between p-4 rounded-2xl text-white transition hover:opacity-95"
+          style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 14px rgba(99,102,241,0.3)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-black text-base">Weekly Summary</p>
+              <p className="text-xs text-white/80">Auto-generated every Sunday morning — see new leads, activities, and wins</p>
+            </div>
+          </div>
+          <span className="text-xs font-bold bg-white/20 px-3 py-1.5 rounded-full">View →</span>
+        </Link>
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
