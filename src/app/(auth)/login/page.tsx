@@ -143,21 +143,6 @@ export default function LoginPage() {
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</> : "Sign in →"}
             </button>
           </form>
-
-          <div className="mt-8 p-4 rounded-xl border border-dashed border-gray-300" style={{ background: "rgba(99,102,241,0.03)" }}>
-            <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Demo Accounts</p>
-            {[
-              { email: "admin@crm.com", role: "Admin" },
-              { email: "manager@crm.com", role: "Manager" },
-              { email: "agent@crm.com", role: "Agent" },
-            ].map(({ email, role }) => (
-              <div key={email} className="flex items-center justify-between py-1">
-                <span className="text-xs font-mono text-gray-600">{email}</span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{role}</span>
-              </div>
-            ))}
-            <p className="text-xs text-gray-400 mt-2">Password: <span className="font-mono font-semibold text-gray-600">Admin1234!</span></p>
-          </div>
         </div>
       </div>
     </div>
