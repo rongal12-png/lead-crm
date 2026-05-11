@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Columns3, CheckSquare,
   TrendingUp, Bot, Settings2, LogOut, ChevronDown,
   Zap, ChevronRight, Circle, CalendarRange, FileText,
-  Trash2, Database,
+  Trash2, Database, UserCircle,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { useState } from "react";
@@ -111,7 +111,7 @@ export default function Sidebar() {
       <div className="px-4 pb-2">
         <div className="px-3 py-1.5 rounded-lg text-center"
           style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
-          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2.4 • AI Active</p>
+          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2.5 • AI Active</p>
         </div>
       </div>
 
@@ -140,9 +140,18 @@ export default function Sidebar() {
               className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden"
               style={{ background: "#1e1f35", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 -8px 32px rgba(0,0,0,0.4)" }}
             >
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm transition hover:bg-white/[0.05]"
+                style={{ color: "#cbd5e1" }}
+              >
+                <UserCircle className="w-4 h-4" />
+                Edit profile
+              </Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm transition hover:bg-white/[0.05]"
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm transition hover:bg-white/[0.05] border-t border-white/[0.05]"
                 style={{ color: "#f87171" }}
               >
                 <LogOut className="w-4 h-4" />

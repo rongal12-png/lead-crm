@@ -145,7 +145,7 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
     );
   }
 
-  const { totals, byOwner, byLeadType, topNewLeads, topWins, bySource } = selected.data;
+  const { totals, byOwner, byLeadType, topNewLeads, topWins, bySource, tasksCompletedList, tasksInProgressList } = selected.data;
   const hasNoData =
     totals.newLeads === 0 &&
     totals.activities === 0 &&
@@ -316,6 +316,106 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
           )}
         </div>
       </div>
+
+      {/* Tasks completed + in progress */}
+      {((tasksCompletedList?.length ?? 0) > 0 || (tasksInProgressList?.length ?? 0) > 0) && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5"
+            style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black uppercase tracking-wide text-gray-400">Tasks completed this week</h3>
+              <span className="text-xs font-black text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                {tasksCompletedList?.length ?? 0}
+              </span>
+            </div>
+            {!tasksCompletedList || tasksCompletedList.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No tasks completed</p>
+            ) : (
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {tasksCompletedList.slice(0, 30).map((t) => (
+                  <div key={t.taskId} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-800 truncate">{t.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                        <span className="font-mono">{new Date(t.completedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                        {t.leadName && t.leadId && (
+                          <>
+                            <span>·</span>
+                            <Link href={`/leads/${t.leadId}`} className="text-indigo-600 hover:underline truncate">
+                              {t.leadName}
+                            </Link>
+                          </>
+                        )}
+                        {t.assigneeName && (
+                          <>
+                            <span>·</span>
+                            <span className="truncate">{t.assigneeName}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {t.priority !== "NORMAL" && t.priority !== "LOW" && (
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ml-2 flex-shrink-0 ${
+                        t.priority === "URGENT" ? "bg-red-50 text-red-700" : "bg-orange-50 text-orange-700"
+                      }`}>
+                        {t.priority}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 p-5"
+            style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black uppercase tracking-wide text-gray-400">Tasks worked on (In Process)</h3>
+              <span className="text-xs font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
+                {tasksInProgressList?.length ?? 0}
+              </span>
+            </div>
+            {!tasksInProgressList || tasksInProgressList.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No tasks in progress</p>
+            ) : (
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {tasksInProgressList.slice(0, 30).map((t) => {
+                  const dueOverdue = t.dueAt && new Date(t.dueAt) < new Date();
+                  return (
+                    <div key={t.taskId} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-800 truncate">{t.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                          {t.dueAt && (
+                            <span className={`font-mono ${dueOverdue ? "text-red-600 font-bold" : ""}`}>
+                              {dueOverdue ? "⚠ " : ""}
+                              {new Date(t.dueAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                            </span>
+                          )}
+                          {t.leadName && t.leadId && (
+                            <>
+                              {t.dueAt && <span>·</span>}
+                              <Link href={`/leads/${t.leadId}`} className="text-indigo-600 hover:underline truncate">
+                                {t.leadName}
+                              </Link>
+                            </>
+                          )}
+                          {t.assigneeName && (
+                            <>
+                              <span>·</span>
+                              <span className="truncate">{t.assigneeName}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Sources */}
       {bySource.length > 0 && (

@@ -12,7 +12,11 @@ const updateSchema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const isAdmin = session.user.role === "ADMIN";
+  const isSelf = session.user.id === params.id;
+  if (!isAdmin && !isSelf) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -20,9 +24,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
+  const data = isAdmin ? parsed.data : { name: parsed.data.name };
+  if (!data.name && !isAdmin) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
   const user = await prisma.user.update({
     where: { id: params.id },
-    data: parsed.data,
+    data,
     select: { id: true, name: true, email: true, role: true, status: true },
   });
 

@@ -44,6 +44,27 @@ export type WeeklySummaryData = {
     ownerName: string | null;
   }>;
   bySource: Array<{ source: string; count: number }>;
+  tasksCompletedList?: Array<{
+    taskId: string;
+    title: string;
+    type: string;
+    priority: string;
+    completedAt: string;
+    leadId: string | null;
+    leadName: string | null;
+    assigneeName: string | null;
+  }>;
+  tasksInProgressList?: Array<{
+    taskId: string;
+    title: string;
+    type: string;
+    priority: string;
+    dueAt: string | null;
+    updatedAt: string;
+    leadId: string | null;
+    leadName: string | null;
+    assigneeName: string | null;
+  }>;
 };
 
 export function lastCompletedWeek(now: Date = new Date()): {
@@ -80,6 +101,8 @@ export async function computeWeeklySummary(
     newLeadsByType,
     topNewLeads,
     leadsBySource,
+    tasksCompletedDetails,
+    tasksInProgressDetails,
   ] = await Promise.all([
     prisma.lead.count({ where: { createdAt: range } }),
     prisma.activity.groupBy({
@@ -123,6 +146,24 @@ export async function computeWeeklySummary(
       by: ["source"],
       where: { createdAt: range, source: { not: null } },
       _count: true,
+    }),
+    prisma.task.findMany({
+      where: { completedAt: range, status: "COMPLETED" },
+      include: {
+        lead: { select: { id: true, displayName: true } },
+        assignee: { select: { name: true } },
+      },
+      orderBy: { completedAt: "desc" },
+      take: 50,
+    }),
+    prisma.task.findMany({
+      where: { status: "IN_PROGRESS", updatedAt: range },
+      include: {
+        lead: { select: { id: true, displayName: true } },
+        assignee: { select: { name: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 50,
     }),
   ]);
 
@@ -233,6 +274,27 @@ export async function computeWeeklySummary(
       ownerName: l.owner?.name ?? null,
     })),
     bySource,
+    tasksCompletedList: tasksCompletedDetails.map((t) => ({
+      taskId: t.id,
+      title: t.title,
+      type: t.type,
+      priority: t.priority,
+      completedAt: (t.completedAt ?? new Date()).toISOString(),
+      leadId: t.lead?.id ?? null,
+      leadName: t.lead?.displayName ?? null,
+      assigneeName: t.assignee?.name ?? null,
+    })),
+    tasksInProgressList: tasksInProgressDetails.map((t) => ({
+      taskId: t.id,
+      title: t.title,
+      type: t.type,
+      priority: t.priority,
+      dueAt: t.dueAt?.toISOString() ?? null,
+      updatedAt: t.updatedAt.toISOString(),
+      leadId: t.lead?.id ?? null,
+      leadName: t.lead?.displayName ?? null,
+      assigneeName: t.assignee?.name ?? null,
+    })),
   };
 }
 

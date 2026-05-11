@@ -61,7 +61,7 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
   ]);
 
   return {
-    meta: { takenAt: new Date().toISOString(), appVersion: "0.2.4" },
+    meta: { takenAt: new Date().toISOString(), appVersion: "0.2.5" },
     users,
     leadTypes,
     pipelines,
