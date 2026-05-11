@@ -36,3 +36,6 @@ next-env.d.ts
 
 # prisma
 prisma/migrations/dev.db
+
+# claude code local config (per-machine)
+.claude/
