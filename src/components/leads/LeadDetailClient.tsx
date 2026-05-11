@@ -85,6 +85,7 @@ interface Lead {
 interface Props {
   lead: Lead;
   agents: { id: string; name: string }[];
+  leadTypes: { id: string; name: string; color: string }[];
   currentUserId: string;
   isAdmin: boolean;
 }
@@ -105,7 +106,7 @@ const activityTypeIcon: Record<string, string> = {
   FILE_SENT: "📄",
 };
 
-export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin }: Props) {
+export default function LeadDetailClient({ lead, agents, leadTypes, currentUserId, isAdmin }: Props) {
   const router = useRouter();
   const [currentLead, setCurrentLead] = useState(lead);
   const [editMode, setEditMode] = useState(false);
@@ -119,8 +120,10 @@ export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin 
     potentialAmount: lead.potentialAmount ?? "",
     committedAmount: lead.committedAmount ?? "",
     priority: lead.priority,
+    leadTypeId: lead.leadType?.id ?? "",
     nextFollowUpAt: lead.nextFollowUpAt ? lead.nextFollowUpAt.split("T")[0] : "",
   });
+  const [updatingType, setUpdatingType] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -159,13 +162,15 @@ export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...editData,
+          leadTypeId: editData.leadTypeId || null,
           potentialAmount: editData.potentialAmount ? Number(editData.potentialAmount) : null,
           committedAmount: editData.committedAmount ? Number(editData.committedAmount) : null,
         }),
       });
       const result = await res.json();
       if (result.success) {
-        setCurrentLead((l) => ({ ...l, ...editData }));
+        const newType = leadTypes.find((t) => t.id === editData.leadTypeId) ?? null;
+        setCurrentLead((l) => ({ ...l, ...editData, leadType: newType }));
         setEditMode(false);
         toast.success("Lead updated");
       }
@@ -173,6 +178,30 @@ export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin 
       toast.error("Failed to update");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function changeLeadType(leadTypeId: string) {
+    setUpdatingType(true);
+    try {
+      const res = await fetch(`/api/leads/${currentLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadTypeId: leadTypeId || null }),
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        const newType = leadTypes.find((t) => t.id === leadTypeId) ?? null;
+        setCurrentLead((l) => ({ ...l, leadType: newType }));
+        setEditData((d) => ({ ...d, leadTypeId }));
+        toast.success("סוג הליד עודכן");
+      } else {
+        toast.error(result.error ?? "עדכון נכשל");
+      }
+    } catch {
+      toast.error("שגיאת רשת");
+    } finally {
+      setUpdatingType(false);
     }
   }
 
@@ -369,11 +398,20 @@ export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin 
                 )}
               </div>
               <div className="flex flex-col items-end gap-1">
-                {currentLead.leadType && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${leadTypeColor(currentLead.leadType.name)}`}>
-                    {currentLead.leadType.name}
-                  </span>
-                )}
+                <select
+                  value={currentLead.leadType?.id ?? ""}
+                  onChange={(e) => changeLeadType(e.target.value)}
+                  disabled={updatingType}
+                  title="שנה סוג ליד"
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60 ${
+                    currentLead.leadType ? leadTypeColor(currentLead.leadType.name) : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  <option value="">— ללא סוג —</option>
+                  {leadTypes.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
                 {currentLead.aiScore != null && (
                   <div className="flex items-center gap-1 text-sm font-bold">
                     {currentLead.aiScore >= 70 && <Flame className="w-4 h-4 text-orange-500" />}
