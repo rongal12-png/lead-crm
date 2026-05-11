@@ -1,6 +1,6 @@
 {
   "name": "lead-management-crm",
-  "version": "0.2.6",
+  "version": "1.0.0-beta",
   "private": true,
   "scripts": {
     "dev": "next dev",
