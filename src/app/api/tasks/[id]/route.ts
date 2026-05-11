@@ -8,19 +8,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { status, title, description, dueAt, priority, complete } = body;
+  const { status, title, description, dueAt, priority, complete, leadId, type, assignedTo } = body;
 
   const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
   if (priority !== undefined) updates.priority = priority;
   if (dueAt !== undefined) updates.dueAt = dueAt ? new Date(dueAt) : null;
+  if (leadId !== undefined) updates.leadId = leadId || null;
+  if (type !== undefined) updates.type = type;
+  if (assignedTo !== undefined) updates.assignedTo = assignedTo || null;
 
   if (complete === true || status === "COMPLETED") {
     updates.status = "COMPLETED";
     updates.completedAt = new Date();
   } else if (status !== undefined) {
     updates.status = status;
+    if (status !== "COMPLETED") updates.completedAt = null;
   }
 
   const task = await prisma.task.update({

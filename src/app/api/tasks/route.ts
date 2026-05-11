@@ -8,15 +8,15 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const isAdmin = session.user.role === "ADMIN";
 
   const overdue = searchParams.get("overdue") === "true";
   const status = searchParams.get("status");
+  const assignedTo = searchParams.get("assignedTo");
 
   const where: Parameters<typeof prisma.task.findMany>[0]["where"] = {
-    ...(isAdmin ? {} : { assignedTo: session.user.id }),
-    ...(status ? { status: status as "OPEN" } : { status: { in: ["OPEN", "IN_PROGRESS"] } }),
+    ...(status ? { status: status as "OPEN" } : { status: { in: ["OPEN", "IN_PROGRESS", "COMPLETED"] } }),
     ...(overdue ? { dueAt: { lt: new Date() } } : {}),
+    ...(assignedTo ? { assignedTo } : {}),
   };
 
   const tasks = await prisma.task.findMany({
@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
       lead: { select: { id: true, displayName: true } },
       assignee: { select: { id: true, name: true, image: true } },
     },
-    orderBy: [{ dueAt: "asc" }, { priority: "desc" }],
-    take: 100,
+    orderBy: [{ status: "asc" }, { dueAt: "asc" }, { priority: "desc" }],
+    take: 300,
   });
 
   return NextResponse.json({ data: tasks });
