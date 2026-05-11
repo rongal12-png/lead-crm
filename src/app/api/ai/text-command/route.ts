@@ -48,7 +48,29 @@ export async function POST(req: NextRequest) {
   // New command
   if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
 
-  const intent = await parseIntent(text, session.user.id);
+  let intent;
+  try {
+    intent = await parseIntent(text, session.user.id);
+  } catch (err) {
+    const e = err as { status?: number; code?: string; message?: string };
+    const message = e?.message ?? "Unknown error";
+    if (e?.status === 429 || /quota|insufficient_quota|billing/i.test(message)) {
+      return NextResponse.json(
+        { success: false, error: "המכסה ב־OpenAI הסתיימה. צריך להוסיף קרדיט בחשבון: https://platform.openai.com/account/billing" },
+        { status: 402 }
+      );
+    }
+    if (e?.status === 401 || /api[_ ]?key/i.test(message)) {
+      return NextResponse.json(
+        { success: false, error: "מפתח OpenAI לא תקין או חסר. בדוק את OPENAI_API_KEY בקובץ .env" },
+        { status: 401 }
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: `AI parse failed: ${message}` },
+      { status: 502 }
+    );
+  }
 
   const command = await prisma.aICommand.create({
     data: {
