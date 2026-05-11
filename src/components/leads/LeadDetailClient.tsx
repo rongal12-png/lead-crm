@@ -20,6 +20,7 @@ import {
   Clock,
   DollarSign,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { formatCurrency, formatDate, formatRelativeTime, priorityColor, leadTypeColor } from "@/lib/utils";
 import Link from "next/link";
@@ -128,6 +129,27 @@ export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin 
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function archiveLead() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/leads/${currentLead.id}`, { method: "DELETE" });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        toast.success("הליד הועבר לארכיון. ניתן לשחזר ממסך Trash.");
+        router.push("/leads");
+      } else {
+        toast.error(result.error ?? "מחיקה נכשלה");
+      }
+    } catch {
+      toast.error("שגיאת רשת");
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
+  }
 
   async function saveEdit() {
     setSaving(true);
@@ -269,12 +291,64 @@ export default function LeadDetailClient({ lead, agents, currentUserId, isAdmin 
               </button>
             </>
           ) : (
-            <button onClick={() => setEditMode(true)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Edit2 className="w-4 h-4" /> Edit
-            </button>
+            <>
+              <button onClick={() => setEditMode(true)} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
+                <Edit2 className="w-4 h-4" /> Edit
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                title="העבר לארכיון (ניתן לשחזר)"
+              >
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => e.target === e.currentTarget && setDeleteConfirm(false)}
+        >
+          <div className="bg-white rounded-2xl max-w-md w-full p-6" dir="rtl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900">למחוק את הליד?</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  הליד <strong>{currentLead.displayName}</strong> יועבר לארכיון.
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  אפשר לשחזר אותו מאוחר יותר מ־<strong>Trash / Restore</strong> בתפריט הצד.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-60"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={archiveLead}
+                disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-xl hover:opacity-90 disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)" }}
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {deleting ? "מוחק..." : "מחק"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}

@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const isAdmin = session.user.role === "ADMIN";
 
   const page = parseInt(searchParams.get("page") ?? "1");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "25"), 100);
@@ -50,9 +49,7 @@ export async function GET(req: NextRequest) {
     status: (searchParams.get("status") as "ACTIVE" | "INACTIVE" | "ARCHIVED" | undefined) ?? "ACTIVE",
   };
 
-  if (!isAdmin) {
-    where.ownerId = session.user.id;
-  } else if (searchParams.get("ownerId")) {
+  if (searchParams.get("ownerId")) {
     where.ownerId = searchParams.get("ownerId")!;
   }
 

@@ -40,11 +40,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const isAdmin = session.user.role === "ADMIN";
-  if (!isAdmin && lead.ownerId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   return NextResponse.json({ data: lead });
 }
 
@@ -56,9 +51,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const isAdmin = session.user.role === "ADMIN";
-  if (!isAdmin && lead.ownerId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const body = await req.json();
   const {
@@ -122,10 +114,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const lead = await prisma.lead.findUnique({ where: { id: params.id } });
   if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
