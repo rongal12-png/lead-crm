@@ -12,8 +12,6 @@ export default async function PipelinePage({
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
-  const isAdmin = session.user.role === "ADMIN";
-
   const pipelines = await prisma.pipeline.findMany({
     include: {
       stages: { orderBy: { order: "asc" } },
@@ -29,7 +27,6 @@ export default async function PipelinePage({
         where: {
           pipelineId: selectedPipeline.id,
           status: "ACTIVE",
-          ...(isAdmin ? {} : { ownerId: session.user.id }),
         },
         include: {
           leadType: { select: { name: true, color: true } },
@@ -45,9 +42,9 @@ export default async function PipelinePage({
     : [];
 
   return (
-    <div className="h-screen flex flex-col">
+    <div>
       <Header title="Pipeline" />
-      <div className="flex-1 overflow-hidden p-6 pb-0">
+      <div className="p-6">
         <KanbanBoard
           pipelines={pipelines}
           selectedPipeline={JSON.parse(JSON.stringify(selectedPipeline ?? null))}
