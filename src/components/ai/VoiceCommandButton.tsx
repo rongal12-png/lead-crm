@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Loader2, X, CheckCircle, XCircle, Sparkles, AlertTriangle } from "lucide-react";
+import { Mic, MicOff, Loader2, X, CheckCircle, XCircle, Sparkles, AlertTriangle, Globe } from "lucide-react";
 import { toast } from "sonner";
+
+const LANG_OPTIONS = [
+  { code: "he-IL", label: "עברית" },
+  { code: "en-US", label: "English" },
+] as const;
+type LangCode = (typeof LANG_OPTIONS)[number]["code"];
+const LANG_STORAGE_KEY = "voice-command-lang";
 
 interface ProposedAction {
   type: string;
@@ -54,9 +61,27 @@ export default function VoiceCommandButton() {
   const [result, setResult] = useState<CommandResult | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [interimText, setInterimText] = useState("");
+  const [lang, setLang] = useState<LangCode>("he-IL");
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const finalTranscriptRef = useRef<string>("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(LANG_STORAGE_KEY) as LangCode | null;
+    if (stored && LANG_OPTIONS.some((o) => o.code === stored)) {
+      setLang(stored);
+    } else if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("he")) {
+      setLang("he-IL");
+    }
+  }, []);
+
+  function changeLang(next: LangCode) {
+    setLang(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LANG_STORAGE_KEY, next);
+    }
+  }
 
   useEffect(() => {
     if (phase === "recording") {
@@ -83,7 +108,7 @@ export default function VoiceCommandButton() {
     }
     try {
       const rec = new Ctor();
-      rec.lang = navigator.language || "en-US";
+      rec.lang = lang;
       rec.interimResults = true;
       rec.continuous = true;
       rec.maxAlternatives = 1;
@@ -193,33 +218,53 @@ export default function VoiceCommandButton() {
 
   const isOpen = phase !== "idle";
 
+  const isHebrew = lang === "he-IL";
+
   return (
     <>
-      <button
-        onClick={() => phase === "idle" ? startRecording() : (phase === "recording" ? stopRecording() : null)}
-        title="Voice command"
-        className="relative flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
-        style={
-          phase === "recording"
-            ? { background: "#fef2f2", color: "#dc2626", border: "2px solid #fca5a5" }
-            : { background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }
-        }
-      >
-        {phase === "recording" ? (
-          <>
-            <MicOff className="w-4 h-4" />
-            <span>{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</span>
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500">
-              <span className="absolute inset-0 rounded-full bg-red-400 animate-ping" />
-            </span>
-          </>
-        ) : (
-          <>
-            <Mic className="w-4 h-4" />
-            <span className="hidden sm:inline">Voice</span>
-          </>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => phase === "idle" ? startRecording() : (phase === "recording" ? stopRecording() : null)}
+          title={isHebrew ? "פקודה קולית" : "Voice command"}
+          className="relative flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
+          style={
+            phase === "recording"
+              ? { background: "#fef2f2", color: "#dc2626", border: "2px solid #fca5a5" }
+              : { background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }
+          }
+        >
+          {phase === "recording" ? (
+            <>
+              <MicOff className="w-4 h-4" />
+              <span>{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</span>
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500">
+                <span className="absolute inset-0 rounded-full bg-red-400 animate-ping" />
+              </span>
+            </>
+          ) : (
+            <>
+              <Mic className="w-4 h-4" />
+              <span className="hidden sm:inline">{isHebrew ? "קול" : "Voice"}</span>
+            </>
+          )}
+        </button>
+
+        {phase === "idle" && (
+          <div className="relative">
+            <select
+              value={lang}
+              onChange={(e) => changeLang(e.target.value as LangCode)}
+              title={isHebrew ? "שפת זיהוי קולי" : "Voice recognition language"}
+              className="appearance-none pl-7 pr-2 py-2 text-xs font-bold rounded-xl border border-gray-200 bg-white text-gray-700 hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition cursor-pointer"
+            >
+              {LANG_OPTIONS.map((opt) => (
+                <option key={opt.code} value={opt.code}>{opt.label}</option>
+              ))}
+            </select>
+            <Globe className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+          </div>
         )}
-      </button>
+      </div>
 
       {isOpen && phase === "recording" && interimText && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-2 rounded-xl bg-white shadow-lg border border-gray-200 text-sm text-gray-700">

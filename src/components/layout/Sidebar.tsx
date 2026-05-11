@@ -6,7 +6,8 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, Users, Columns3, CheckSquare,
   TrendingUp, Bot, Settings2, LogOut, ChevronDown,
-  Zap, ChevronRight, Circle,
+  Zap, ChevronRight, Circle, CalendarRange, FileText,
+  Trash2, Database,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { useState } from "react";
@@ -16,12 +17,16 @@ const nav = [
   { href: "/leads", label: "Leads", icon: Users, color: "#34d399" },
   { href: "/pipeline", label: "Pipeline", icon: Columns3, color: "#60a5fa" },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, color: "#fb923c" },
+  { href: "/reports/weekly", label: "Weekly Summary", icon: CalendarRange, color: "#22d3ee" },
   { href: "/reports", label: "Reports", icon: TrendingUp, color: "#f472b6" },
+  { href: "/kai-terms", label: "Kai Terms", icon: FileText, color: "#facc15" },
   { href: "/ai", label: "AI Assistant", icon: Bot, color: "#a78bfa" },
 ];
 
 const adminNav = [
   { href: "/admin", label: "Back Office", icon: Settings2, color: "#94a3b8" },
+  { href: "/admin/backups", label: "Backups", icon: Database, color: "#38bdf8" },
+  { href: "/trash", label: "Trash / Restore", icon: Trash2, color: "#f87171" },
 ];
 
 export default function Sidebar() {
@@ -33,8 +38,14 @@ export default function Sidebar() {
   const role = session?.user?.role ?? "USER";
   const name = session?.user?.name ?? "";
 
+  const allHrefs = [...nav.map((n) => n.href), ...adminNav.map((n) => n.href)];
   function NavItem({ href, label, icon: Icon, color }: { href: string; label: string; icon: typeof LayoutDashboard; color: string }) {
-    const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/")) || (href === "/dashboard" && pathname === "/dashboard");
+    const exact = pathname === href;
+    const prefix = href !== "/dashboard" && pathname.startsWith(href + "/");
+    const hasMoreSpecific = allHrefs.some(
+      (other) => other !== href && other.startsWith(href + "/") && (pathname === other || pathname.startsWith(other + "/"))
+    );
+    const active = exact || (prefix && !hasMoreSpecific) || (href === "/dashboard" && pathname === "/dashboard");
     return (
       <Link href={href}
         style={active ? { background: "rgba(99,102,241,0.12)", color: "#c7d2fe" } : {}}
@@ -100,7 +111,7 @@ export default function Sidebar() {
       <div className="px-4 pb-2">
         <div className="px-3 py-1.5 rounded-lg text-center"
           style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
-          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2 • AI Active</p>
+          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2.2 • AI Active</p>
         </div>
       </div>
 

@@ -54,9 +54,23 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const task = await prisma.task.findUnique({ where: { id: params.id } });
+  if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   await prisma.task.update({
     where: { id: params.id },
     data: { status: "CANCELLED" },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: session.user.id,
+      entityType: "Task",
+      entityId: params.id,
+      action: "CANCEL",
+      before: { status: task.status, title: task.title, dueAt: task.dueAt?.toISOString() ?? null },
+      after: { status: "CANCELLED" },
+    },
   });
 
   return NextResponse.json({ success: true });
