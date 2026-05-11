@@ -146,17 +146,19 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  team          Team?          @relation(fields: [teamId], references: [id])
-  ownedLeads    Lead[]         @relation("LeadOwner")
-  createdLeads  Lead[]         @relation("LeadCreator")
-  activities    Activity[]
-  assignedTasks Task[]         @relation("TaskAssignee")
-  createdTasks  Task[]         @relation("TaskCreator")
-  notifications Notification[]
-  aiCommands    AICommand[]
-  sessions      Session[]
-  accounts      Account[]
-  auditLogs     AuditLog[]
+  team             Team?                     @relation(fields: [teamId], references: [id])
+  ownedLeads       Lead[]                    @relation("LeadOwner")
+  createdLeads     Lead[]                    @relation("LeadCreator")
+  activities       Activity[]
+  assignedTasks    Task[]                    @relation("TaskAssignee")
+  createdTasks     Task[]                    @relation("TaskCreator")
+  notifications    Notification[]
+  aiCommands       AICommand[]
+  sessions         Session[]
+  accounts         Account[]
+  auditLogs        AuditLog[]
+  conversations    ConversationParticipant[]
+  sentMessages     Message[]                 @relation("MessageSender")
 
   @@index([email])
   @@index([teamId])
@@ -539,4 +541,43 @@ model BackupSnapshot {
   data          Json
 
   @@index([createdAt])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }

@@ -18,6 +18,9 @@ export type BackupPayload = {
   weeklySummaries: unknown[];
   stageHistories: unknown[];
   kaiTerms: unknown[];
+  conversations: unknown[];
+  conversationParticipants: unknown[];
+  messages: unknown[];
 };
 
 export async function buildBackupPayload(): Promise<BackupPayload> {
@@ -38,6 +41,9 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
     weeklySummaries,
     stageHistories,
     kaiTerms,
+    conversations,
+    conversationParticipants,
+    messages,
   ] = await Promise.all([
     prisma.user.findMany(),
     prisma.leadType.findMany(),
@@ -58,10 +64,13 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
     prisma.weeklySummary.findMany(),
     prisma.stageHistory.findMany(),
     prisma.kaiTerms.findMany(),
+    prisma.conversation.findMany(),
+    prisma.conversationParticipant.findMany(),
+    prisma.message.findMany({ orderBy: { createdAt: "desc" }, take: 50000 }),
   ]);
 
   return {
-    meta: { takenAt: new Date().toISOString(), appVersion: "0.2.5" },
+    meta: { takenAt: new Date().toISOString(), appVersion: "0.2.6" },
     users,
     leadTypes,
     pipelines,
@@ -78,6 +87,9 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
     weeklySummaries,
     stageHistories,
     kaiTerms,
+    conversations,
+    conversationParticipants,
+    messages,
   };
 }
 
@@ -99,6 +111,9 @@ export function summarizeCounts(p: BackupPayload): Record<string, number> {
     weeklySummaries: p.weeklySummaries.length,
     stageHistories: p.stageHistories.length,
     kaiTerms: p.kaiTerms.length,
+    conversations: p.conversations.length,
+    conversationParticipants: p.conversationParticipants.length,
+    messages: p.messages.length,
   };
 }
 

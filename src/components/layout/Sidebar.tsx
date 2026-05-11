@@ -7,8 +7,9 @@ import {
   LayoutDashboard, Users, Columns3, CheckSquare,
   TrendingUp, Bot, Settings2, LogOut, ChevronDown,
   Zap, ChevronRight, Circle, CalendarRange, FileText,
-  Trash2, Database, UserCircle,
+  Trash2, Database, UserCircle, MessageSquare,
 } from "lucide-react";
+import UnreadBadge from "@/components/inbox/UnreadBadge";
 import { getInitials } from "@/lib/utils";
 import { useState } from "react";
 
@@ -17,6 +18,7 @@ const nav = [
   { href: "/leads", label: "Leads", icon: Users, color: "#34d399" },
   { href: "/pipeline", label: "Pipeline", icon: Columns3, color: "#60a5fa" },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, color: "#fb923c" },
+  { href: "/inbox", label: "Inbox", icon: MessageSquare, color: "#38bdf8", badge: true },
   { href: "/reports/weekly", label: "Weekly Summary", icon: CalendarRange, color: "#22d3ee" },
   { href: "/reports", label: "Reports", icon: TrendingUp, color: "#f472b6" },
   { href: "/kai-terms", label: "Kai Terms", icon: FileText, color: "#facc15" },
@@ -39,7 +41,7 @@ export default function Sidebar() {
   const name = session?.user?.name ?? "";
 
   const allHrefs = [...nav.map((n) => n.href), ...adminNav.map((n) => n.href)];
-  function NavItem({ href, label, icon: Icon, color }: { href: string; label: string; icon: typeof LayoutDashboard; color: string }) {
+  function NavItem({ href, label, icon: Icon, color, badge }: { href: string; label: string; icon: typeof LayoutDashboard; color: string; badge?: boolean }) {
     const exact = pathname === href;
     const prefix = href !== "/dashboard" && pathname.startsWith(href + "/");
     const hasMoreSpecific = allHrefs.some(
@@ -54,12 +56,13 @@ export default function Sidebar() {
         }`}
       >
         <div
-          className="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+          className="relative w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
           style={{
             background: active ? `${color}22` : "rgba(255,255,255,0.04)",
           }}
         >
           <Icon className="w-[15px] h-[15px]" style={{ color: active ? color : "#6b7280" }} />
+          {badge && <UnreadBadge />}
         </div>
         <span className="flex-1 leading-none">{label}</span>
         {active && <Circle className="w-1.5 h-1.5 flex-shrink-0 fill-current" style={{ color }} />}
@@ -111,7 +114,7 @@ export default function Sidebar() {
       <div className="px-4 pb-2">
         <div className="px-3 py-1.5 rounded-lg text-center"
           style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
-          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2.5 • AI Active</p>
+          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v0.2.6 • AI Active</p>
         </div>
       </div>
 
