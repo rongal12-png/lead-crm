@@ -7,10 +7,11 @@ import {
   LayoutDashboard, Users, Columns3, CheckSquare,
   TrendingUp, Bot, Settings2, LogOut, ChevronDown,
   Zap, ChevronRight, Circle, CalendarRange, FileText,
-  Trash2, Database, UserCircle, MessageSquare,
+  Trash2, Database, UserCircle, MessageSquare, History,
 } from "lucide-react";
 import UnreadBadge from "@/components/inbox/UnreadBadge";
 import { getInitials } from "@/lib/utils";
+import { CURRENT_VERSION } from "@/lib/version-log";
 import { useState } from "react";
 
 const nav = [
@@ -28,6 +29,7 @@ const nav = [
 const adminNav = [
   { href: "/admin", label: "Back Office", icon: Settings2, color: "#94a3b8" },
   { href: "/admin/backups", label: "Backups", icon: Database, color: "#38bdf8" },
+  { href: "/admin/changelog", label: "Version Log", icon: History, color: "#c084fc" },
   { href: "/trash", label: "Trash / Restore", icon: Trash2, color: "#f87171" },
 ];
 
@@ -112,10 +114,21 @@ export default function Sidebar() {
 
       {/* Version badge */}
       <div className="px-4 pb-2">
-        <div className="px-3 py-1.5 rounded-lg text-center"
-          style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
-          <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v1.0.0 BETA • AI Active</p>
-        </div>
+        {isAdmin ? (
+          <Link
+            href="/admin/changelog"
+            className="block px-3 py-1.5 rounded-lg text-center transition hover:bg-indigo-500/10"
+            style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}
+            title="Version log"
+          >
+            <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v{CURRENT_VERSION} • AI Active</p>
+          </Link>
+        ) : (
+          <div className="px-3 py-1.5 rounded-lg text-center"
+            style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
+            <p className="text-[10px] font-semibold" style={{ color: "#4b5270" }}>LeadOS v{CURRENT_VERSION} • AI Active</p>
+          </div>
+        )}
       </div>
 
       {/* User */}

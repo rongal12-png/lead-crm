@@ -300,14 +300,27 @@ export async function computeWeeklySummary(
 
 export async function generateAndPersistWeeklySummary(
   weekStart: Date,
-  weekEnd: Date
+  weekEnd: Date,
+  options: { withNarrative?: boolean } = { withNarrative: true }
 ) {
   const data = await computeWeeklySummary(weekStart, weekEnd);
-  return prisma.weeklySummary.upsert({
+  const summary = await prisma.weeklySummary.upsert({
     where: { weekStart },
     create: { weekStart, weekEnd, data: data as object },
-    update: { weekEnd, data: data as object, generatedAt: new Date() },
+    update: { weekEnd, data: data as object, generatedAt: new Date(), narrative: null },
   });
+
+  if (options.withNarrative !== false && process.env.OPENAI_API_KEY) {
+    try {
+      const { generateAndPersistWeeklyNarrative } = await import("./ai/weekly-narrative");
+      await generateAndPersistWeeklyNarrative(summary.id);
+      return prisma.weeklySummary.findUniqueOrThrow({ where: { id: summary.id } });
+    } catch (err) {
+      console.error("[weekly-summary] AI narrative generation failed", err);
+    }
+  }
+
+  return summary;
 }
 
 export async function notifyAdminsOfWeeklySummary(
