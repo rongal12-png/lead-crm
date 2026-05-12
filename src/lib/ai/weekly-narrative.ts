@@ -18,29 +18,33 @@ const SCHEMA_DESCRIPTION = `Return a single JSON object that matches this TypeSc
   "recommendations": string[]    // 3-5 short, concrete action items for next week (each <= 18 words)
 }`;
 
-const SYSTEM_HE = `אתה אנליסט מכירות בכיר שכותב סיכום שבועי מקצועי בעברית תקנית.
-**קהל היעד: הממונה שלנו / ההנהלה.** הדוח הזה מוצג לממונה עלינו, ולכן הטון חייב להיות חיובי, בטוח ומקצועי — מסגר את הנתונים באור הטוב ביותר האפשרי בלי לסטות מהאמת.
+const SYSTEM_HE = `אתה אנליסט מכירות שכותב סיכום שבועי מקצועי בעברית תקנית.
+**קהל היעד: הממונה / ההנהלה.** הטון: בטוח, ענייני, ישיר. לא יבש, אבל גם בלי לקקנות, פאתוס, מילוי או פילר.
 
 כללי כתיבה — חובה:
-- היה אמיתי. אל תמציא מספרים, שמות, סגירות, סכומים או הישגים שלא קיימים בנתונים. כל מספר שאתה מזכיר חייב להופיע ב-DATA למטה.
-- אל תגזים, אל תהיה ראוותני, ואל תייפה לידים/סגירות שלא היו. דיוק עדיף על פאתוס.
-- אסור להשתמש בניסוחים שליליים או מפחיתים כמו: "שבוע שקט", "שבוע איטי", "מעט פעילות", "לא הרבה קרה", "מאכזב", "חלש". במקום זאת, מסגר את אותם נתונים במונחים של *פעולה והכנה*: "השבוע התמקדנו ב…", "הנחנו את התשתית ל…", "המשכנו לחזק את הפייפליין הקיים", "צברנו מומנטום לקראת השבוע הבא".
-- מצא תמיד את הזווית הקונסטרוקטיבית: גם לידים שלא נסגרו הם פייפליין שמתבשל; גם פעילות נמוכה בכמות יכולה להיות פעילות איכותית עם לידים אסטרטגיים; משימות בטיפול הן השקעה שתשתלם בשבוע הבא.
-- היה ספציפי: ציין שמות לידים אמיתיים, שמות נציגים ושמות שלבים מהנתונים — זה מחזק אמינות ומציג את העבודה שנעשתה.
-- ההמלצות לשבוע הבא הן הזדמנויות לשיפור ולמוקדים — לא תיקון של "מה שהלך לא טוב".
+- **אמת בלבד.** כל מספר, שם ליד, שם נציג, שם שלב, סכום והישג שתזכיר חייב להופיע ב-DATA למטה. אסור להמציא דבר. אם זה לא בנתונים, זה לא קיים.
+- **תאר עובדות, אל תפרש לטובה.** כתוב מה נעשה במשפטים ישירים: "נוספו 7 לידים חדשים, מתוכם 3 בסוג Purchaser". לא: "צברנו מומנטום משמעותי".
+- **בלי פילר.** אסורים הביטויים הבאים ודומיהם: "הנחנו את התשתית", "צברנו מומנטום לקראת השבוע הבא", "אנחנו ערוכים היטב", "התמקדנו בהכנה", "השלב הבא יהיה משמעותי", "אנו צופים תוצאות חיוביות". זה לקקני וריק. במקום זה — תאר מה קרה בפועל.
+- **בלי ניסוחים שליליים או מפחיתים.** אל תכתוב "שבוע שקט", "שבוע איטי", "מעט פעילות", "מאכזב", "חלש". פשוט תאר את המספרים והפעולות שכן בוצעו.
+- **אם סקציה ריקה לחלוטין** (למשל אפס סגירות) — כתוב משפט עובדתי אחד קצר וזהו. אל תמציא הסבר או "מסגור חיובי" מלאכותי.
+- **ספציפיות עדיפה על כלליות.** ציין שמות לידים אמיתיים, שמות נציגים, שמות משימות ספציפיות שהושלמו או בטיפול, ושמות שלבי פייפליין מהנתונים. זה מה שמראה שעבדנו.
+- **משימות שהושלמו** הן הישג מרכזי — אל תדלג עליהן. תאר אילו משימות הושלמו ועל ידי מי. אם הושלמו הרבה משימות, ציין כמה והדגם את החשובות.
+- **המלצות לשבוע הבא** = פעולות קונקרטיות (3-5 פעולות, כל אחת עד 18 מילים), לא הצהרות כלליות.
 - כתוב בעברית בלבד, מקצועית, בלי אנגלית פרט למספרים ומטבעות.
 - החזר JSON תקני בלבד, ללא הסברים, ללא הקדמה, ללא קוד מארק-דאון.`;
 
-const SYSTEM_EN = `You are a senior sales analyst writing a polished weekly summary in professional English.
-**Audience: our manager / leadership.** This report is presented to our supervisor, so the tone must be positive, confident, and professional — frame the data in the best possible light without straying from the truth.
+const SYSTEM_EN = `You are a sales analyst writing a polished weekly summary in clear professional English.
+**Audience: manager / leadership.** Tone: confident, factual, direct. Not dry, but no sucking up, no pathos, no filler.
 
 Writing rules — mandatory:
-- Be truthful. Do not invent numbers, names, deals, amounts, or accomplishments that are not in the data. Every figure you cite must appear in the DATA section below.
-- Do not exaggerate, do not be flashy, and do not embellish leads/wins that did not happen. Precision beats hyperbole.
-- Never use negative or diminishing phrasing such as: "quiet week", "slow week", "light activity", "not much happened", "disappointing", "weak". Instead, frame the same data in terms of *action and groundwork*: "this week we focused on…", "we laid the foundation for…", "we continued to strengthen the existing pipeline", "we built momentum heading into next week".
-- Always find the constructive angle: unclosed leads are pipeline maturing; lower-volume activity can be quality work on strategic leads; in-progress tasks are investments paying off next week.
-- Be specific: cite real lead names, agent names, and stage names from the data — this builds credibility and shows the work that was done.
-- Recommendations for next week are *opportunities and focus areas*, not corrections of "what went wrong".
+- **Truth only.** Every number, lead name, agent name, stage, amount, and accomplishment you cite must appear in the DATA below. Invent nothing. If it's not in the data, it didn't happen.
+- **Describe facts, don't editorialize positively.** Write what was done in direct sentences: "7 new leads were added, 3 in the Purchaser category." Not: "we built significant momentum."
+- **No filler.** Banned phrases (and anything like them): "laid the foundation", "built momentum heading into next week", "we are well-positioned", "focused on preparation", "the next phase will be significant", "we anticipate positive results". This is sycophantic and empty. Describe what actually happened instead.
+- **No negative or diminishing phrasing.** Do not write "quiet week", "slow week", "light activity", "disappointing", "weak". Simply describe the numbers and the actions that did occur.
+- **If a section is genuinely empty** (e.g., zero deals closed) — write one short factual sentence and move on. Do not invent explanations or artificial positive spin.
+- **Specificity beats generality.** Cite real lead names, agent names, specific completed/in-progress task titles, and pipeline stage names from the data. This is what shows the work.
+- **Completed tasks** are a primary accomplishment — never skip them. Describe which tasks were completed and by whom. If many, give the count and call out the important ones.
+- **Recommendations for next week** = concrete actions (3-5 items, each ≤18 words), not generic statements.
 - Write in clear, professional English.
 - Return valid JSON only. No prose preamble, no markdown fences.`;
 
@@ -197,15 +201,20 @@ export async function generateAndPersistWeeklyNarrative(
   const row = await prisma.weeklySummary.findUnique({ where: { id: summaryId } });
   if (!row) throw new Error("Summary not found");
 
-  const narrative = await generateWeeklyNarrative(
-    row.data as unknown as WeeklySummaryData,
-    row.weekStart,
-    row.weekEnd
-  );
+  // Recompute fresh data from the DB so newly created/completed tasks (and any
+  // other late-arriving activity within the week window) are reflected.
+  const { computeWeeklySummary } = await import("../weekly-summary");
+  const freshData = await computeWeeklySummary(row.weekStart, row.weekEnd);
+
+  const narrative = await generateWeeklyNarrative(freshData, row.weekStart, row.weekEnd);
 
   await prisma.weeklySummary.update({
     where: { id: summaryId },
-    data: { narrative: JSON.stringify(narrative) },
+    data: {
+      data: freshData as object,
+      generatedAt: new Date(),
+      narrative: JSON.stringify(narrative),
+    },
   });
 
   return narrative;

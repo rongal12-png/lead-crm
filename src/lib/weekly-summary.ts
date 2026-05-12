@@ -82,6 +82,23 @@ export function lastCompletedWeek(now: Date = new Date()): {
   return { weekStart: prevSunday, weekEnd: prevSaturdayEnd };
 }
 
+/**
+ * Current week-to-date: Sunday 00:00 UTC of the current week → now.
+ * Use this when the user wants a report covering THIS week so far.
+ */
+export function currentWeekToDate(now: Date = new Date()): {
+  weekStart: Date;
+  weekEnd: Date;
+} {
+  const dayOfWeek = now.getUTCDay();
+  const thisSundayUTC = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - dayOfWeek
+  );
+  return { weekStart: new Date(thisSundayUTC), weekEnd: now };
+}
+
 export async function computeWeeklySummary(
   weekStart: Date,
   weekEnd: Date

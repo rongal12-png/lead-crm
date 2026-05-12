@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   generateAndPersistWeeklySummary,
   lastCompletedWeek,
+  currentWeekToDate,
   WeeklySummaryData,
 } from "@/lib/weekly-summary";
 
@@ -29,7 +30,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden — admin only" }, { status: 403 });
   }
 
-  // Optional: pass {weekStart} to generate a specific week, otherwise last completed.
+  // Accept either explicit { weekStart, weekEnd } or { period: "current" | "last" }.
+  // Default: last completed week.
   let weekStart: Date;
   let weekEnd: Date;
   try {
@@ -40,6 +42,8 @@ export async function POST(req: NextRequest) {
       if (Number.isNaN(weekStart.getTime()) || Number.isNaN(weekEnd.getTime())) {
         return NextResponse.json({ error: "Invalid dates" }, { status: 400 });
       }
+    } else if (body.period === "current") {
+      ({ weekStart, weekEnd } = currentWeekToDate());
     } else {
       ({ weekStart, weekEnd } = lastCompletedWeek());
     }

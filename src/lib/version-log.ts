@@ -31,9 +31,33 @@ export type VersionEntry = {
   changes: VersionChange[];
 };
 
-export const CURRENT_VERSION = "1.0.3";
+export const CURRENT_VERSION = "1.0.4";
 
 export const VERSION_LOG: VersionEntry[] = [
+  {
+    version: "1.0.4",
+    date: "2026-05-12",
+    type: "patch",
+    title: "Less sycophantic AI tone + current-week reports + fresh data on regenerate",
+    titleHe: "AI פחות לקקני + דוח לשבוע הנוכחי + נתונים טריים בחידוש",
+    changes: [
+      {
+        kind: "improvement",
+        description: "AI prompt rewritten again: factual and direct, banned filler phrases like \"built momentum\" or \"laid the foundation\". Describes what actually happened, never invents data.",
+        descriptionHe: "פרומפט ה-AI נכתב מחדש: ענייני וישיר, אסורים ביטויי פילר כמו \"צברנו מומנטום\" או \"הנחנו את התשתית\". מתאר מה קרה בפועל ולא ממציא נתונים.",
+      },
+      {
+        kind: "fix",
+        description: "Regenerate-AI used stale DB data — newly created/completed tasks were invisible to the model. Now recomputes fresh data from the DB before regenerating the narrative.",
+        descriptionHe: "כפתור \"חידוש סיכום AI\" השתמש בנתונים ישנים — משימות שנוצרו/הושלמו לאחרונה לא היו זמינות למודל. כעת מחושב מחדש מה-DB לפני יצירת הסיכום.",
+      },
+      {
+        kind: "feature",
+        description: "New \"Generate (this week so far)\" button generates a report for the current in-progress week, not only the last completed week.",
+        descriptionHe: "כפתור חדש \"צור דוח (השבוע, עד עכשיו)\" יוצר דוח לשבוע הנוכחי בעיצומו, לא רק לשבוע הקודם המלא.",
+      },
+    ],
+  },
   {
     version: "1.0.3",
     date: "2026-05-12",

@@ -109,7 +109,8 @@ const UI_STRINGS = {
   he: {
     pageHint: "סיכום שבועי מבוסס AI עם הורדת PDF, שפה ניתנת להחלפה, וגישה לכל הדוחות הקודמים.",
     languageLabel: "שפה",
-    regenerate: "צור דוח חדש (שבוע קודם)",
+    regenerate: "צור דוח (שבוע קודם)",
+    regenerateCurrent: "צור דוח (השבוע, עד עכשיו)",
     regenerating: "מייצר...",
     regenerateAI: "חידוש סיכום AI",
     downloadPDF: "הורדה כ-PDF",
@@ -165,7 +166,8 @@ const UI_STRINGS = {
   en: {
     pageHint: "AI-powered weekly summary with PDF download, language toggle, and full report history.",
     languageLabel: "Language",
-    regenerate: "Generate new (last week)",
+    regenerate: "Generate (last week)",
+    regenerateCurrent: "Generate (this week so far)",
     regenerating: "Generating...",
     regenerateAI: "Regenerate AI",
     downloadPDF: "Download PDF",
@@ -239,10 +241,14 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
   );
   const narrativeContent: NarrativeContent | null = narrative ? narrative[lang] : null;
 
-  async function handleGenerate() {
+  async function handleGenerate(period: "last" | "current" = "last") {
     setGenerating(true);
     try {
-      const res = await fetch("/api/weekly-summaries", { method: "POST" });
+      const res = await fetch("/api/weekly-summaries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ period }),
+      });
       const result = await res.json();
       if (!res.ok) {
         toast.error(result.error ?? "Failed to generate");
@@ -292,12 +298,10 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
         return;
       }
       toast.success(lang === "he" ? "סיכום AI עודכן" : "AI summary updated");
-      // Refresh selected summary's narrative locally
-      setSummaries((prev) =>
-        prev.map((s) =>
-          s.id === selected.id ? { ...s, narrative: JSON.stringify(result.narrative) } : s
-        )
-      );
+      // The narrative endpoint recomputes the underlying data too, so reload
+      // the full list to pick up fresh totals/lists.
+      const list = await fetch("/api/weekly-summaries").then((r) => r.json());
+      if (list?.data) setSummaries(list.data);
     } catch {
       toast.error("Network error");
     } finally {
@@ -320,7 +324,7 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
         </p>
         {isAdmin && (
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate("last")}
             disabled={generating}
             className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl transition disabled:opacity-60"
             style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
@@ -400,10 +404,22 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
             </button>
           )}
 
-          {/* Generate fresh */}
+          {/* Generate fresh — current week (week-to-date) */}
           {isAdmin && (
             <button
-              onClick={handleGenerate}
+              onClick={() => handleGenerate("current")}
+              disabled={generating}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-bold text-emerald-700 bg-emerald-50 border-2 border-emerald-100 rounded-xl transition hover:bg-emerald-100 disabled:opacity-60"
+            >
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {generating ? t.regenerating : t.regenerateCurrent}
+            </button>
+          )}
+
+          {/* Generate fresh — last completed week */}
+          {isAdmin && (
+            <button
+              onClick={() => handleGenerate("last")}
               disabled={generating}
               className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-bold text-gray-700 bg-white border-2 border-gray-100 rounded-xl transition hover:bg-gray-50 disabled:opacity-60"
             >
