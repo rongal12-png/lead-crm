@@ -31,9 +31,33 @@ export type VersionEntry = {
   changes: VersionChange[];
 };
 
-export const CURRENT_VERSION = "1.0.2";
+export const CURRENT_VERSION = "1.0.3";
 
 export const VERSION_LOG: VersionEntry[] = [
+  {
+    version: "1.0.3",
+    date: "2026-05-12",
+    type: "patch",
+    title: "Manager-friendly weekly report tone + delete reports",
+    titleHe: "טון דוח שבועי מתאים לממונה + מחיקת דוחות",
+    changes: [
+      {
+        kind: "improvement",
+        description: "AI weekly summary prompt rewritten: positive, constructive tone framed for presentation to management — no \"quiet week\" or \"slow week\" phrasing, never invents data.",
+        descriptionHe: "פרומפט סיכום ה-AI נכתב מחדש: טון חיובי וקונסטרוקטיבי המתאים להצגה להנהלה — בלי ניסוחים כמו \"שבוע שקט\" או \"שבוע איטי\", ובלי המצאת נתונים.",
+      },
+      {
+        kind: "improvement",
+        description: "Removed the static \"Quiet week\" banner from both the dashboard view and the printable PDF.",
+        descriptionHe: "הוסר הבאנר הסטטי \"שבוע שקט\" מהמסך וגם מה-PDF להדפסה.",
+      },
+      {
+        kind: "feature",
+        description: "Admins can now delete weekly reports from the history panel (with confirmation).",
+        descriptionHe: "מנהלים יכולים למחוק דוחות שבועיים מפאנל ההיסטוריה (עם אישור).",
+      },
+    ],
+  },
   {
     version: "1.0.2",
     date: "2026-05-12",

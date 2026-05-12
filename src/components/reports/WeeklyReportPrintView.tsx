@@ -243,14 +243,6 @@ export default function WeeklyReportPrintView({
   const { totals, byOwner, byLeadType, bySource, topNewLeads, topWins, tasksCompletedList, tasksInProgressList } = summary.data;
   const content: NarrativeContent | null = narrative ? narrative[lang] : null;
 
-  const hasNoData =
-    totals.newLeads === 0 &&
-    totals.activities === 0 &&
-    totals.stageChanges === 0 &&
-    totals.wonDeals === 0 &&
-    totals.tasksCreated === 0 &&
-    totals.tasksCompleted === 0;
-
   async function handleRegenerate() {
     setRegenerating(true);
     try {
@@ -438,23 +430,6 @@ export default function WeeklyReportPrintView({
               {s.generatedAt}: {fmtDateTime(summary.generatedAt, lang)}
             </div>
           </div>
-
-          {hasNoData && (
-            <div
-              className="avoid-break"
-              style={{
-                background: "#fef3c7",
-                border: "1px solid #fde68a",
-                color: "#92400e",
-                padding: 14,
-                borderRadius: 10,
-                fontSize: 14,
-                marginBottom: 24,
-              }}
-            >
-              {s.quietWeek}
-            </div>
-          )}
 
           {/* KPI grid */}
           <Section title={s.keyNumbers} accent>

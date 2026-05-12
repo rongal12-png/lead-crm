@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Lightbulb,
   Star,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { WeeklySummaryData } from "@/lib/weekly-summary";
@@ -128,6 +129,9 @@ const UI_STRINGS = {
     historyTitle: "היסטוריית דוחות",
     historyHint: "כל הדוחות נשמרים במערכת. לחץ על שבוע כדי לעבור אליו.",
     noHistory: "אין דוחות נוספים בהיסטוריה.",
+    deleteReport: "מחק דוח",
+    deleteConfirm: "למחוק את הדוח של השבוע הזה? פעולה זו לא ניתנת לביטול.",
+    deleted: "הדוח נמחק",
     showing: "מציג",
     generated: "נוצר",
     open: "פתח",
@@ -181,6 +185,9 @@ const UI_STRINGS = {
     historyTitle: "Report History",
     historyHint: "All weekly reports are saved. Click a week to view it.",
     noHistory: "No additional reports in history.",
+    deleteReport: "Delete report",
+    deleteConfirm: "Delete this week's report? This cannot be undone.",
+    deleted: "Report deleted",
     showing: "Viewing",
     generated: "Generated",
     open: "Open",
@@ -252,6 +259,26 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
     }
   }
 
+  async function handleDelete(id: string) {
+    if (!window.confirm(t.deleteConfirm)) return;
+    try {
+      const res = await fetch(`/api/weekly-summaries/${id}`, { method: "DELETE" });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(result.error ?? "Failed to delete");
+        return;
+      }
+      toast.success(t.deleted);
+      const next = summaries.filter((s) => s.id !== id);
+      setSummaries(next);
+      if (selectedId === id) {
+        setSelectedId(next[0]?.id ?? null);
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  }
+
   async function handleRegenerateAI() {
     if (!selected) return;
     setRegeneratingAI(true);
@@ -307,11 +334,6 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
   }
 
   const { totals, byOwner, byLeadType, topNewLeads, topWins, bySource, tasksCompletedList, tasksInProgressList } = selected.data;
-  const hasNoData =
-    totals.newLeads === 0 &&
-    totals.activities === 0 &&
-    totals.stageChanges === 0 &&
-    totals.wonDeals === 0;
 
   const pdfHref = `/print/weekly/${selected.id}?lang=${lang}`;
 
@@ -391,12 +413,6 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
           )}
         </div>
       </div>
-
-      {hasNoData && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-          {t.quietWeek}
-        </div>
-      )}
 
       {/* AI narrative section */}
       <AINarrativePanel
@@ -666,6 +682,7 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
         summaries={summaries}
         selectedId={selected.id}
         onSelect={setSelectedId}
+        onDelete={isAdmin ? handleDelete : undefined}
         lang={lang}
         t={t}
       />
@@ -833,12 +850,14 @@ function ReportHistoryPanel({
   summaries,
   selectedId,
   onSelect,
+  onDelete,
   lang,
   t,
 }: {
   summaries: Summary[];
   selectedId: string;
   onSelect: (id: string) => void;
+  onDelete?: (id: string) => void;
   lang: NarrativeLang;
   t: typeof UI_STRINGS["he"];
 }) {
@@ -866,33 +885,50 @@ function ReportHistoryPanel({
             const isActive = s.id === selectedId;
             const totals = s.data.totals;
             return (
-              <button
+              <div
                 key={s.id}
-                onClick={() => onSelect(s.id)}
-                className={`text-left p-3 rounded-xl border-2 transition ${
+                className={`relative p-3 rounded-xl border-2 transition ${
                   isActive
                     ? "bg-indigo-50 border-indigo-300"
                     : "bg-white border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30"
                 }`}
               >
-                <div className="text-sm font-black text-gray-900">
-                  {fmtDate(s.weekStart, lang)}
-                </div>
-                <div className="text-[10px] text-gray-400 mt-0.5">
-                  {fmtDate(s.weekStart, lang)} – {fmtDate(s.weekEnd, lang)}
-                </div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 mt-2">
-                  <span>{totals.newLeads}L</span>
-                  <span>·</span>
-                  <span>{totals.activities}A</span>
-                  {totals.wonDeals > 0 && (
-                    <>
-                      <span>·</span>
-                      <span className="text-green-700">{totals.wonDeals}W</span>
-                    </>
-                  )}
-                </div>
-              </button>
+                <button
+                  onClick={() => onSelect(s.id)}
+                  className="block text-start w-full"
+                >
+                  <div className="text-sm font-black text-gray-900 pe-7">
+                    {fmtDate(s.weekStart, lang)}
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">
+                    {fmtDate(s.weekStart, lang)} – {fmtDate(s.weekEnd, lang)}
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 mt-2">
+                    <span>{totals.newLeads}L</span>
+                    <span>·</span>
+                    <span>{totals.activities}A</span>
+                    {totals.wonDeals > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="text-green-700">{totals.wonDeals}W</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+                {onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(s.id);
+                    }}
+                    aria-label={t.deleteReport}
+                    title={t.deleteReport}
+                    className="absolute top-2 end-2 w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-600 hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
