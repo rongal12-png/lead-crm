@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { WeeklySummaryData } from "@/lib/weekly-summary";
-import { parseNarrative, type NarrativeLang } from "@/lib/ai/weekly-narrative";
+import { parseNarrative, type NarrativeLang } from "@/lib/ai/weekly-narrative-types";
 import WeeklyReportPrintView from "@/components/reports/WeeklyReportPrintView";
 
 export const dynamic = "force-dynamic";

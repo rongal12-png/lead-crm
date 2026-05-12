@@ -29,7 +29,7 @@ import {
   type WeeklyNarrative,
   type NarrativeContent,
   type NarrativeLang,
-} from "@/lib/ai/weekly-narrative";
+} from "@/lib/ai/weekly-narrative-types";
 
 type Summary = {
   id: string;

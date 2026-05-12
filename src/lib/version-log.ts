@@ -31,9 +31,23 @@ export type VersionEntry = {
   changes: VersionChange[];
 };
 
-export const CURRENT_VERSION = "1.0.1";
+export const CURRENT_VERSION = "1.0.2";
 
 export const VERSION_LOG: VersionEntry[] = [
+  {
+    version: "1.0.2",
+    date: "2026-05-12",
+    type: "patch",
+    title: "Fix: weekly summary page crashed on load",
+    titleHe: "תיקון: עמוד הסיכום השבועי קרס בטעינה",
+    changes: [
+      {
+        kind: "fix",
+        description: "Weekly summary page threw a client-side exception because the AI module pulled the OpenAI SDK into the browser bundle. Split types/parser into a server-safe file.",
+        descriptionHe: "עמוד הסיכום השבועי קרס מצד הלקוח כי מודול ה-AI גרר את ה-OpenAI SDK ל-bundle של הדפדפן. פוצל קובץ הטיפוסים והפענוח לקובץ נפרד בטוח ללקוח.",
+      },
+    ],
+  },
   {
     version: "1.0.1",
     date: "2026-05-12",

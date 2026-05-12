@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Download, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import type { WeeklySummaryData } from "@/lib/weekly-summary";
-import type { WeeklyNarrative, NarrativeLang, NarrativeContent } from "@/lib/ai/weekly-narrative";
+import type { WeeklyNarrative, NarrativeLang, NarrativeContent } from "@/lib/ai/weekly-narrative-types";
 
 type Summary = {
   id: string;

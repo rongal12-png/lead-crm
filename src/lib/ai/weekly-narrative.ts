@@ -1,26 +1,10 @@
 import { openai, OPENAI_MODEL } from "../openai";
 import { prisma } from "../prisma";
 import type { WeeklySummaryData } from "../weekly-summary";
+import type { NarrativeContent, NarrativeLang, WeeklyNarrative } from "./weekly-narrative-types";
 
-export type NarrativeLang = "he" | "en";
-
-export type NarrativeContent = {
-  headline: string;
-  executiveSummary: string;
-  leadAcquisition: string;
-  pipelineProgress: string;
-  tasksWork: string;
-  highlights: string[];
-  concerns: string[];
-  recommendations: string[];
-};
-
-export type WeeklyNarrative = {
-  he: NarrativeContent;
-  en: NarrativeContent;
-  model: string;
-  generatedAt: string;
-};
+export type { NarrativeContent, NarrativeLang, WeeklyNarrative };
+export { parseNarrative } from "./weekly-narrative-types";
 
 const SCHEMA_DESCRIPTION = `Return a single JSON object that matches this TypeScript type EXACTLY (no markdown fences, no extra keys):
 {
@@ -217,15 +201,3 @@ export async function generateAndPersistWeeklyNarrative(
   return narrative;
 }
 
-export function parseNarrative(raw: string | null | undefined): WeeklyNarrative | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && parsed.he && parsed.en) {
-      return parsed as WeeklyNarrative;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
