@@ -108,18 +108,18 @@ async function main() {
     });
   }
 
-  // Purchaser Pipeline
-  const purchaserPipeline = await prisma.pipeline.upsert({
+  // Connector Pipeline
+  const connectorPipeline = await prisma.pipeline.upsert({
     where: { id: "pipeline-purchaser" },
     update: {},
     create: {
       id: "pipeline-purchaser",
-      name: "Purchaser Pipeline",
-      description: "Pipeline for buyers and purchasers",
+      name: "Connector Pipeline",
+      description: "Pipeline for connectors who introduce buyers and partners",
     },
   });
 
-  const purchaserStages = [
+  const connectorStages = [
     { name: "New Lead", order: 1, probability: 5, color: "#94a3b8" },
     { name: "Contacted", order: 2, probability: 15, color: "#60a5fa" },
     { name: "Interested", order: 3, probability: 25, color: "#818cf8" },
@@ -134,13 +134,13 @@ async function main() {
     { name: "Future Potential", order: 12, probability: 15, color: "#6b7280" },
   ];
 
-  for (const stageData of purchaserStages) {
+  for (const stageData of connectorStages) {
     await prisma.stage.upsert({
       where: { id: `stage-purchaser-${stageData.order}` },
       update: {},
       create: {
         id: `stage-purchaser-${stageData.order}`,
-        pipelineId: purchaserPipeline.id,
+        pipelineId: connectorPipeline.id,
         ...stageData,
       },
     });
@@ -171,13 +171,13 @@ async function main() {
     },
   });
 
-  const purchaserType = await prisma.leadType.upsert({
+  const connectorType = await prisma.leadType.upsert({
     where: { name: "Connector" },
     update: {},
     create: {
       name: "Connector",
       description: "Connectors who introduce buyers and partners",
-      defaultPipelineId: purchaserPipeline.id,
+      defaultPipelineId: connectorPipeline.id,
       color: "#06b6d4",
     },
   });
@@ -230,20 +230,20 @@ async function main() {
     });
   }
 
-  // Custom fields for Purchaser
-  const purchaserFields = [
+  // Custom fields for Connector
+  const connectorFields = [
     { key: "kyc_status", label: "KYC Status", fieldType: "SELECT" as const, options: ["Not Started", "In Progress", "Approved", "Rejected"], order: 1 },
     { key: "wallet_address", label: "Wallet Address", fieldType: "TEXT" as const, order: 2, isSensitive: true },
     { key: "preferred_language", label: "Preferred Language", fieldType: "SELECT" as const, options: ["Hebrew", "English", "Russian", "French", "Other"], order: 3 },
     { key: "risk_notes", label: "Risk Notes", fieldType: "TEXT" as const, order: 4, isSensitive: true },
   ];
 
-  for (const field of purchaserFields) {
+  for (const field of connectorFields) {
     await prisma.customFieldDefinition.upsert({
-      where: { leadTypeId_key: { leadTypeId: purchaserType.id, key: field.key } },
+      where: { leadTypeId_key: { leadTypeId: connectorType.id, key: field.key } },
       update: {},
       create: {
-        leadTypeId: purchaserType.id,
+        leadTypeId: connectorType.id,
         ...field,
         options: field.options ? JSON.stringify(field.options) : null,
         isSensitive: (field as { isSensitive?: boolean }).isSensitive ?? false,
@@ -288,7 +288,7 @@ async function main() {
 
   // Sample leads
   const vcStage1 = await prisma.stage.findFirst({ where: { pipelineId: vcPipeline.id, order: 5 } });
-  const purchaserStage1 = await prisma.stage.findFirst({ where: { pipelineId: purchaserPipeline.id, order: 3 } });
+  const connectorStage1 = await prisma.stage.findFirst({ where: { pipelineId: connectorPipeline.id, order: 3 } });
 
   await prisma.lead.upsert({
     where: { id: "sample-lead-1" },
@@ -330,9 +330,9 @@ async function main() {
       phone: "+972501234567",
       country: "IL",
       source: "Website",
-      leadTypeId: purchaserType.id,
-      pipelineId: purchaserPipeline.id,
-      stageId: purchaserStage1?.id,
+      leadTypeId: connectorType.id,
+      pipelineId: connectorPipeline.id,
+      stageId: connectorStage1?.id,
       ownerId: agent.id,
       createdBy: agent.id,
       potentialAmount: 20000,

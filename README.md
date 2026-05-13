@@ -105,7 +105,7 @@ npx prisma db push && npx ts-node --compiler-options '{"module":"CommonJS"}' pri
 ## תכונות MVP
 
 - ✅ Login + Role-based permissions (Admin, Manager, Agent, Viewer)
-- ✅ ניהול לידים — VC, Leader, Purchaser
+- ✅ ניהול לידים — VC, Leader, Connector
 - ✅ Pipeline Kanban עם drag & drop
 - ✅ Lead Detail Page עם timeline מלא
 - ✅ Tasks & Follow-ups עם תזכורות

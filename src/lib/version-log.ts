@@ -31,9 +31,23 @@ export type VersionEntry = {
   changes: VersionChange[];
 };
 
-export const CURRENT_VERSION = "1.0.6";
+export const CURRENT_VERSION = "1.0.7";
 
 export const VERSION_LOG: VersionEntry[] = [
+  {
+    version: "1.0.7",
+    date: "2026-05-13",
+    type: "patch",
+    title: "Pipeline renamed Purchaser → Connector",
+    titleHe: "פייפליין שונה מ-Purchaser ל-Connector",
+    changes: [
+      {
+        kind: "improvement",
+        description: "\"Purchaser Pipeline\" renamed to \"Connector Pipeline\" everywhere — pipeline name, description, seed variable names, and README. The same renamed pipeline keeps all existing stages and leads.",
+        descriptionHe: "\"Purchaser Pipeline\" שונה ל-\"Connector Pipeline\" בכל המקומות — שם הפייפליין, התיאור, שמות משתנים ב-seed וב-README. אותו פייפליין נשאר עם כל השלבים והלידים הקיימים.",
+      },
+    ],
+  },
   {
     version: "1.0.6",
     date: "2026-05-13",
