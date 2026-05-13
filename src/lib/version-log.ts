@@ -31,9 +31,23 @@ export type VersionEntry = {
   changes: VersionChange[];
 };
 
-export const CURRENT_VERSION = "1.0.5";
+export const CURRENT_VERSION = "1.0.6";
 
 export const VERSION_LOG: VersionEntry[] = [
+  {
+    version: "1.0.6",
+    date: "2026-05-13",
+    type: "patch",
+    title: "Sidebar scrolls inside its own viewport on short screens",
+    titleHe: "סיידבר נגלל בתוך עצמו במסכים קצרים",
+    changes: [
+      {
+        kind: "fix",
+        description: "Sidebar height switched from min-h-screen to h-screen so the nav list scrolls inside the sidebar instead of pushing the user menu off-screen on short viewports.",
+        descriptionHe: "גובה הסיידבר שונה מ-min-h-screen ל-h-screen, כך שהתפריט נגלל בתוך הסיידבר במקום לדחוף את אזור המשתמש מחוץ למסך במסכים נמוכים.",
+      },
+    ],
+  },
   {
     version: "1.0.5",
     date: "2026-05-13",
