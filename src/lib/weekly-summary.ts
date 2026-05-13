@@ -190,8 +190,8 @@ export async function computeWeeklySummary(
   const totals = {
     newLeads: newLeadsCount,
     activities: Object.values(actByType).reduce((s, n) => s + n, 0),
-    callsCount: actByType.CALL ?? 0,
-    meetingsCount: actByType.MEETING ?? 0,
+    callsCount: (actByType.CALL ?? 0) + (actByType.MEETING ?? 0),
+    meetingsCount: 0,
     emailsCount: actByType.EMAIL ?? 0,
     messagesCount: (actByType.WHATSAPP ?? 0) + (actByType.TELEGRAM ?? 0),
     notesCount: actByType.NOTE ?? 0,

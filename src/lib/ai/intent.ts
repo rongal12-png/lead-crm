@@ -17,8 +17,8 @@ Return JSON only, in this shape:
   "leadMatch": { "name": "string", "company": "string" } | null,
   "updates": {} | null,
   "note": "string" | null,
-  "task": { "title": "string", "type": "CALL|EMAIL|WHATSAPP|MEETING|SEND_DOCS|OTHER", "dueAt": "ISO date" | null, "priority": "LOW|NORMAL|HIGH|URGENT" } | null,
-  "newLead": { "displayName": "string", "companyName": "string|null", "leadType": "VC|Leader|Purchaser", "email": "string|null", "phone": "string|null", "source": "string|null", "potentialAmount": number|null, "currency": "USD" } | null,
+  "task": { "title": "string", "type": "CALL|EMAIL|WHATSAPP|SEND_DOCS|OTHER", "dueAt": "ISO date" | null, "priority": "LOW|NORMAL|HIGH|URGENT" } | null,
+  "newLead": { "displayName": "string", "companyName": "string|null", "leadType": "VC|Leader|Connector", "email": "string|null", "phone": "string|null", "source": "string|null", "potentialAmount": number|null, "currency": "USD" } | null,
   "requiresConfirmation": boolean,
   "userFacingSummary": "short summary of what will be done, in the user's language"
 }`;

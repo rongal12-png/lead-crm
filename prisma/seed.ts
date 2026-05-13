@@ -172,11 +172,11 @@ async function main() {
   });
 
   const purchaserType = await prisma.leadType.upsert({
-    where: { name: "Purchaser" },
+    where: { name: "Connector" },
     update: {},
     create: {
-      name: "Purchaser",
-      description: "Buyers and purchasers",
+      name: "Connector",
+      description: "Connectors who introduce buyers and partners",
       defaultPipelineId: purchaserPipeline.id,
       color: "#06b6d4",
     },

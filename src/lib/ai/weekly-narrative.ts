@@ -23,7 +23,7 @@ const SYSTEM_HE = `אתה אנליסט מכירות שכותב סיכום שבו
 
 כללי כתיבה — חובה:
 - **אמת בלבד.** כל מספר, שם ליד, שם נציג, שם שלב, סכום והישג שתזכיר חייב להופיע ב-DATA למטה. אסור להמציא דבר. אם זה לא בנתונים, זה לא קיים.
-- **תאר עובדות, אל תפרש לטובה.** כתוב מה נעשה במשפטים ישירים: "נוספו 7 לידים חדשים, מתוכם 3 בסוג Purchaser". לא: "צברנו מומנטום משמעותי".
+- **תאר עובדות, אל תפרש לטובה.** כתוב מה נעשה במשפטים ישירים: "נוספו 7 לידים חדשים, מתוכם 3 בסוג Connector". לא: "צברנו מומנטום משמעותי".
 - **בלי פילר.** אסורים הביטויים הבאים ודומיהם: "הנחנו את התשתית", "צברנו מומנטום לקראת השבוע הבא", "אנחנו ערוכים היטב", "התמקדנו בהכנה", "השלב הבא יהיה משמעותי", "אנו צופים תוצאות חיוביות". זה לקקני וריק. במקום זה — תאר מה קרה בפועל.
 - **בלי ניסוחים שליליים או מפחיתים.** אל תכתוב "שבוע שקט", "שבוע איטי", "מעט פעילות", "מאכזב", "חלש". פשוט תאר את המספרים והפעולות שכן בוצעו.
 - **אם סקציה ריקה לחלוטין** (למשל אפס סגירות) — כתוב משפט עובדתי אחד קצר וזהו. אל תמציא הסבר או "מסגור חיובי" מלאכותי.
@@ -38,7 +38,7 @@ const SYSTEM_EN = `You are a sales analyst writing a polished weekly summary in 
 
 Writing rules — mandatory:
 - **Truth only.** Every number, lead name, agent name, stage, amount, and accomplishment you cite must appear in the DATA below. Invent nothing. If it's not in the data, it didn't happen.
-- **Describe facts, don't editorialize positively.** Write what was done in direct sentences: "7 new leads were added, 3 in the Purchaser category." Not: "we built significant momentum."
+- **Describe facts, don't editorialize positively.** Write what was done in direct sentences: "7 new leads were added, 3 in the Connector category." Not: "we built significant momentum."
 - **No filler.** Banned phrases (and anything like them): "laid the foundation", "built momentum heading into next week", "we are well-positioned", "focused on preparation", "the next phase will be significant", "we anticipate positive results". This is sycophantic and empty. Describe what actually happened instead.
 - **No negative or diminishing phrasing.** Do not write "quiet week", "slow week", "light activity", "disappointing", "weak". Simply describe the numbers and the actions that did occur.
 - **If a section is genuinely empty** (e.g., zero deals closed) — write one short factual sentence and move on. Do not invent explanations or artificial positive spin.
@@ -58,7 +58,7 @@ function buildDataDigest(data: WeeklySummaryData, weekStart: Date, weekEnd: Date
   lines.push("");
   lines.push("TOTALS:");
   lines.push(`- New leads added: ${t.newLeads}`);
-  lines.push(`- Activities logged: ${t.activities} (calls ${t.callsCount}, meetings ${t.meetingsCount}, emails ${t.emailsCount}, messages ${t.messagesCount}, notes ${t.notesCount})`);
+  lines.push(`- Activities logged: ${t.activities} (calls ${t.callsCount}, emails ${t.emailsCount}, messages ${t.messagesCount}, notes ${t.notesCount})`);
   lines.push(`- Pipeline stage changes: ${t.stageChanges}`);
   lines.push(`- Tasks created: ${t.tasksCreated}, completed: ${t.tasksCompleted}`);
   lines.push(`- Deals won: ${t.wonDeals} ($${t.wonAmount.toLocaleString()})`);

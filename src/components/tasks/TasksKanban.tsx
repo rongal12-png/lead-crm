@@ -487,7 +487,6 @@ function TaskModal({
                 <option value="CALL">שיחת טלפון</option>
                 <option value="EMAIL">אימייל</option>
                 <option value="WHATSAPP">ווטסאפ</option>
-                <option value="MEETING">פגישה</option>
                 <option value="SEND_DOCS">שליחת מסמכים</option>
                 <option value="COLLECT_PAYMENT">גביית תשלום</option>
                 <option value="UPDATE_KYC">עדכון KYC</option>

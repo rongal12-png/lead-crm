@@ -52,7 +52,7 @@ export async function GET() {
     [
       "Bob Dean",
       "Acme Corp",
-      typeNames[1] ?? "Purchaser",
+      typeNames[1] ?? "Connector",
       "bob@acme.com",
       "+44 20 7946 0123",
       "UK",

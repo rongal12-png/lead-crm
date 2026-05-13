@@ -445,7 +445,6 @@ export default function WeeklyReportPrintView({
               <Kpi label={s.dealsWon} value={totals.wonDeals} hint={fmtCurrency(totals.wonAmount, lang)} color="#15803d" lang={lang} />
               <Kpi label={s.dealsLost} value={totals.lostDeals} color="#b91c1c" lang={lang} />
               <Kpi label={s.calls} value={totals.callsCount} color="#6366f1" lang={lang} />
-              <Kpi label={s.meetings} value={totals.meetingsCount} color="#7c3aed" lang={lang} />
               <Kpi label={s.emails} value={totals.emailsCount} color="#0e7490" lang={lang} />
               <Kpi label={s.messages} value={totals.messagesCount} color="#a16207" lang={lang} />
               <Kpi label={s.stageChanges} value={totals.stageChanges} color="#4338ca" lang={lang} />

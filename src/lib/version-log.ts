@@ -31,9 +31,33 @@ export type VersionEntry = {
   changes: VersionChange[];
 };
 
-export const CURRENT_VERSION = "1.0.4";
+export const CURRENT_VERSION = "1.0.5";
 
 export const VERSION_LOG: VersionEntry[] = [
+  {
+    version: "1.0.5",
+    date: "2026-05-13",
+    type: "patch",
+    title: "Lead types: VC / Leader / Connector + unified calls & meetings",
+    titleHe: "סוגי לידים: VC / Leader / Connector + איחוד שיחות ופגישות",
+    changes: [
+      {
+        kind: "breaking",
+        description: "Lead type \"Purchaser\" renamed to \"Connector\". Existing leads under this type are migrated automatically.",
+        descriptionHe: "סוג הליד \"Purchaser\" שונה ל-\"Connector\". לידים קיימים מועברים אוטומטית.",
+      },
+      {
+        kind: "improvement",
+        description: "\"Calls\" and \"Meetings\" merged into a single activity/task type. Existing MEETING records are converted to CALL.",
+        descriptionHe: "\"שיחות\" ו-\"פגישות\" אוחדו לסוג פעילות/משימה אחד. רישומי פגישה קיימים הומרו לשיחה.",
+      },
+      {
+        kind: "improvement",
+        description: "Weekly report now shows a single \"Calls\" tile (sum of former calls + meetings) instead of two separate tiles.",
+        descriptionHe: "הדוח השבועי מציג כעת אריח אחד \"שיחות\" (סכום שיחות + פגישות לשעבר) במקום שני אריחים נפרדים.",
+      },
+    ],
+  },
   {
     version: "1.0.4",
     date: "2026-05-12",

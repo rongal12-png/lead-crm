@@ -10,7 +10,6 @@ import {
   Phone,
   Mail,
   MessageSquare,
-  Calendar,
   CheckSquare,
   ArrowRight,
   Trophy,
@@ -461,7 +460,6 @@ export default function WeeklySummaryView({ initialSummaries, isAdmin }: Props) 
         <h3 className="text-sm font-black uppercase tracking-wide text-gray-400 mb-4">{t.activityBreakdown}</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <StatTile label={t.calls} value={totals.callsCount} icon={Phone} color="indigo" />
-          <StatTile label={t.meetings} value={totals.meetingsCount} icon={Calendar} color="purple" />
           <StatTile label={t.emails} value={totals.emailsCount} icon={Mail} color="cyan" />
           <StatTile label={t.messages} value={totals.messagesCount} icon={MessageSquare} color="amber" />
           <StatTile label={t.stageChanges} value={totals.stageChanges} icon={ArrowRight} color="indigo" />

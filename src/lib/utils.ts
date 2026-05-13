@@ -59,7 +59,7 @@ export function leadTypeColor(type: string): string {
   switch (type) {
     case "VC": return "bg-indigo-100 text-indigo-700";
     case "Leader": return "bg-purple-100 text-purple-700";
-    case "Purchaser": return "bg-cyan-100 text-cyan-700";
+    case "Connector": return "bg-cyan-100 text-cyan-700";
     default: return "bg-gray-100 text-gray-700";
   }
 }

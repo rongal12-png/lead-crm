@@ -680,7 +680,7 @@ export default function LeadDetailClient({ lead, agents, leadTypes, currentUserI
             {addingNote && (
               <div className="p-4 border-b border-gray-100 bg-gray-50 space-y-2">
                 <div className="flex gap-2">
-                  {["NOTE", "CALL", "MEETING", "EMAIL", "WHATSAPP"].map((type) => (
+                  {["NOTE", "CALL", "EMAIL", "WHATSAPP"].map((type) => (
                     <button
                       key={type}
                       onClick={() => setNoteType(type)}
